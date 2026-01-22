@@ -5,7 +5,7 @@ follow the symlinc and make updates in its real locations. Then push it to the h
 You should also make periodic pulls in the handbook repo to have updated version of this document. At least once per day.
 Please make a git pull in handbook folder and touch this document. Then you can verify the timestamp of the file in order to see when you pulled it last time.
 There shuold be a project_guidelines.md besides this file in your project ./junie folder if there is not one create it. In that file project specific intructions
-should be stored. It should also state if what kind of project this is backend or frontend.
+should be stored. It should also state if what kind of project this is backend or frontend. Add the symlinc to guidelines.md to .gitignore after createing it.
 
 ## Abbreviations
 - This document (guidelines.md) is gl
