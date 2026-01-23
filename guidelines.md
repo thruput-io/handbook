@@ -31,10 +31,12 @@ should be stored. It should also state if what kind of project this is backend o
 - Contracts are located in Contract project of the solution.
 - In domain, we wrap all primitives by subclassing PrimitiveWrapper
 - For instance, a createdAt timestamp on a domain model object 'Lead' should not be just a Instant. It should be a type (LeadCreated) that is a sublass of InstantPrimtiveWrapper. This property has a very specific meaning and should not be reused anywhere else. It should have its own type.
-- Update sdk
-  - dotnet restore --interactive && dotnet package search International.NET.Sdk --take 1
-  - Use the version retrieved from this command to update global.json
-  - After run dotnet restore --interactive again
+
+### Common Tasks
+- **Update sdk**:
+    1. dotnet restore --interactive && dotnet package search International.NET.Sdk --take 1
+    2. Use the version retrieved from this command to update global.json
+    3. fter run dotnet restore --interactive again
 
 ## Frontend - This section applies to front end projects
 - From the contracts we generate the code into the `src/api/generated` folder. Generated code should not be checked in.
