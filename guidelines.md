@@ -28,6 +28,7 @@ should be stored. It should also state if what kind of project this is backend o
 - We never have any primitive types in the domain model.
 
 ## Backend - This section applies to back end projects
+- After each code change I should build solution fix all warnings and run all tests
 - Contracts are located in Contract project of the solution.
 - In domain, we wrap all primitives by subclassing PrimitiveWrapper
 - For instance, a createdAt timestamp on a domain model object 'Lead' should not be just a Instant. It should be a type (LeadCreated) that is a sublass of InstantPrimtiveWrapper. This property has a very specific meaning and should not be reused anywhere else. It should have its own type.
