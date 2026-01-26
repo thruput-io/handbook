@@ -35,6 +35,7 @@ should be stored. It should also state if what kind of project this is backend o
 
 ## Test - This section applies to all projects when writing tests
 - Be very restrictive in use of comments, only when absolutely necessary.
+- When writing integration tests, prefer using raw json data instead of domain models.
 
 ### Common Tasks
 - **Update sdk**:
