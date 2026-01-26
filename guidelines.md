@@ -33,6 +33,9 @@ should be stored. It should also state if what kind of project this is backend o
 - In domain, we wrap all primitives by subclassing PrimitiveWrapper
 - For instance, a createdAt timestamp on a domain model object 'Lead' should not be just a Instant. It should be a type (LeadCreated) that is a sublass of InstantPrimtiveWrapper. This property has a very specific meaning and should not be reused anywhere else. It should have its own type.
 
+## Test - This section applies to all projects when writing tests
+- Be very restrictive in use of comments, only when absolutely necessary.
+
 ### Common Tasks
 - **Update sdk**:
     1. dotnet restore --interactive && dotnet package search International.NET.Sdk --take 1
