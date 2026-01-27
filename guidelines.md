@@ -19,7 +19,7 @@ should be stored. It should also state if what kind of project this is backend o
 
 # Coding - Design Rules and guidelines
 ## Generic - This section applies to both front-end and back end
-- Use the `.tmp/` folder for any temporary files created by you when you are solving tasks
+- Use the `.tmp/` folder for any temporary files created by you when you are solving tasks. Never create temporary files (like `.output.txt`) in the root folder.
 - Contract first. All interaction with rest endpoints should be done through contracts.
 - There should always be a domain model that is used by application code. The domain serves as an abstraction layer between the application and the contracts.
 - The domain model should be very strict. It should be impossible to create invalid instances of it.
@@ -31,6 +31,7 @@ should be stored. It should also state if what kind of project this is backend o
 - After each code change I should build solution fix all warnings and run all tests
 - Contracts are located in Contract project of the solution.
 - In domain, we wrap all primitives by subclassing PrimitiveWrapper
+- Subtypes of PrimitiveWrapper must have private ctor
 - For instance, a createdAt timestamp on a domain model object 'Lead' should not be just a Instant. It should be a type (LeadCreated) that is a sublass of InstantPrimtiveWrapper. This property has a very specific meaning and should not be reused anywhere else. It should have its own type.
 
 ## Test - This section applies to all projects when writing tests
