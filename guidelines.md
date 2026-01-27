@@ -53,12 +53,12 @@ should be stored. It should also state if what kind of project this is backend o
 - Zod is used to generate client and object from the contracts
 - For instance, a createdAt timestamp on a domain model object 'Lead' should not be just a Temporal.Instant. It should be a branded type (LeadCreatedAtBrand) that wraps Temporal.Instant. This property has a very specific meaning and should not be reused anywhere else. It should have its own type.
 
-## Figma MCP Integration Rules
+### Figma MCP Integration Rules
 These rules define how to translate Figma inputs into code for this project and must be followed for every Figma-driven change.
 Use your special tools like mcp_FigmaDesktop_get_screenshot and mcp_FigmaDesktop_get_design_context. Do not invent your own tools for speaking cmp server.
 
 
-### Required flow (do not skip)
+#### Required flow (do not skip)
 1. Run get_design_context first to fetch the structured representation for the exact node(s).
 2. If the response is too large or truncated, run get_metadata to get the high‑level node map and then re‑fetch only the required node(s) with get_design_context.
 3. Run get_screenshot for a visual reference of the node variant being implemented.
@@ -66,7 +66,7 @@ Use your special tools like mcp_FigmaDesktop_get_screenshot and mcp_FigmaDesktop
 5. Translate the output (usually React + Tailwind) into this project's conventions, styles and framework.  Reuse the project's color tokens, components, and typography wherever possible.
 6. Validate against Figma for 1:1 look and behavior before marking complete.
 
-### Implementation rules
+#### Implementation rules
 - Treat the Figma MCP output (React + Tailwind) as a representation of design and behavior, not as final code style.
 - Replace Tailwind utility classes with the project's preferred utilities/design‑system tokens when applicable.
 - Reuse existing components (e.g., buttons, inputs, typography, icon wrappers) instead of duplicating functionality.
