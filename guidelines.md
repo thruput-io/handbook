@@ -7,6 +7,8 @@ Please make a git pull in the handbook folder and touch this document. Then you 
 There should be a project_guidelines.md besides this file in your project ./junie folder if there is not one create it. In that file project-specific instructions
 should be stored. It should also state if what kind of project this is backend or frontend. Add the symlinc to guidelines.md to .gitignore after creating it.
 
+- Before adding new guidelines make sure to correct spelling
+
 ## Abbreviations
 - This document (guidelines.md) is gl
 - The project specific (project_guidelines.md) pgl
@@ -26,6 +28,7 @@ should be stored. It should also state if what kind of project this is backend o
 - The domain model should be immutable.
 - Nothing but the domain model should be allowed in any public api of components, hooks, and services.
 - We never have any primitive types in the domain model.
+- We strive to do validation and defaulting at the perimiters of our code base. Our domain model should make invalid states unrepresentable. This makes out code much more simple with much fewer branches and extending it is easy. In React this means we resolve optional parameters as high as possible in our component hiearchy
 
 ## Backend - This section applies to back end projects
 - After each code change I should build solution fix all warnings and run all tests
@@ -37,6 +40,7 @@ should be stored. It should also state if what kind of project this is backend o
 ## Test - This section applies to all projects when writing tests
 - Do not use comments
 - Do not hesitate to remove comments when they are not needed
+- Always write a test to verify bugs before fixing them
 
 ### Integration tests - this section applies to integration tests
 - When writing integration tests, prefer using raw json data instead of domain models.
@@ -49,9 +53,11 @@ should be stored. It should also state if what kind of project this is backend o
     3. fter run dotnet restore --interactive again
 
 ## Frontend - This section applies to front end projects
+- There should never be a try catch in my fe code excpet for very specific things such as setting up error boundries 
 - From the contracts we generate the code into the `src/api/generated` folder. Generated code should not be checked in.
 - Zod is used to generate client and object from the contracts
 - For instance, a createdAt timestamp on a domain model object 'Lead' should not be just a Temporal.Instant. It should be a branded type (LeadCreatedAtBrand) that wraps Temporal.Instant. This property has a very specific meaning and should not be reused anywhere else. It should have its own type.
+- In E2E tests make a setup that captures the console logs and examine them first in case of test failure
 
 ### Figma MCP Integration Rules
 These rules define how to translate Figma inputs into code for this project and must be followed for every Figma-driven change.
