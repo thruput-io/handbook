@@ -18,9 +18,12 @@ Provides information about how we use Service Bus.
 
 ## Publishing
 SessionId and PartitionKey should be set to the id of the entity
+
+## Schemas
+The entity's id should be replicated inside the message body.
 ª
 ## Events schema
-Event schemas should have each event type as an optional property. That makes the schema easy to evolve.
+ - Event schemas should have each event type as an optional property. That makes the schema easy to evolve.
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
