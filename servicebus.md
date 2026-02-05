@@ -16,6 +16,9 @@ Provides information about how we use Service Bus.
 - Schema for events topics should be named after the event in plural OrderEvents_V1.yaml
 - Schema files should have the _V{version} suffix.
 
+## Publishing
+SessionId and PartitionKey should be set to the id of the entity
+ª
 ## Events schema
 Event schemas should have each event type as an optional property. That makes the schema easy to evolve.
 ```json
