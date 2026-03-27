@@ -1,9 +1,9 @@
 Before performing ANY task:
 
 1. Load and read the following files in this order:
-    1. ./junie/project_guidelines.md
-    2. ./junie/backend_guidelines.md (if project is Backend)
-    3. ./junie/frontend_guidelines.md (if project is Frontend)
+    1. .junie/project_guidelines.md
+    2. .junie/backend_guidelines.md (if project is Backend)
+    3. .junie/frontend_guidelines.md (if project is Frontend)
 
 2. Interpret MUST, MUST NOT, SHOULD, and MAY according to RFC 2119.
 
