@@ -32,11 +32,13 @@ Before performing ANY task:
     - Enforce domain immutability.
     - Make illegal states unrepresentable in the domain layer.
     - Preserve contract-first design.
-    - Use Zod schemas and .safeParse() for all data entering from external boundaries (e.g., localStorage, API responses).
-    - When validation at a boundary fails, you MUST console log the error and clear or reset the corrupt state.
+    - Fail fast over using fallbacks.
+    - Add a unit test for any exploratory troubleshooting even if there is no natural home for it.
+    - Always strive for strictness, never allow sloppy code.
+    - Every test should assert the actual returned values, not just that no error occurred.
 
 7. You SHOULD NOT:
-     - Express optionality in any other way than by null.
+     - Express optionality in any other way than by null, empty string is never okay.
      - Return or use a default value when failing.
      - Use a default value for satisfying a contract.
      - Disable linting rules via comment, pragma or similar.
@@ -44,8 +46,40 @@ Before performing ANY task:
      - Bypass the Application layer.
      - Introduce primitives in domain models.
      - Commit generated code.
+     - Make assumptions without evidence. 
+     - Write tests that discard return values without asserting them just to increase coverage.
 
 8. When uncertain you SHOULD:
     - Default to strict domain modeling.
     - Default to stronger typing.
     - Default to architectural discipline over brevity.
+
+9. PHILOSOPHY AND PRINCIPLES YOU SHOULD HONOR:
+   1. THE QUALITY of our software is ALWAYS the highest priority
+   2. There is NO SITUATION that rectifies lowering of the quality in favor of other objectives
+   3. ALL OTHER OBJECTIVES will be harder to achieve if the quality is lowered, such as:
+      - Faster development
+      - Higher performance
+         - Cool features
+   4. QUALITY of software is measured by:
+      - Correctness, doing what our users want it to do
+      - Maintainability
+      - Readability
+      - Testability
+      - Simplicity
+      - 'True' test coverage
+      - Easiness of doing right
+      - Guardrails for doing wrong
+      - Level of automation in development, testing, and deployment
+      - Actuality of tools and libraries used and at what ease staying so is
+   5. QUALITY of software is NOT measured by:
+      - Smartness or cleverness
+      - Compactness
+      - Performance
+      - Features
+   6. We achieve QUALITY by:
+      - By always striving for strictness over sloppiness
+      - Failing fast over using fallbacks
+      - Following best practices and standards
+      - Making all our code testable and tested
+      - By making illegal states unrepresentable
