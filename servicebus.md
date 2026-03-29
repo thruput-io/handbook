@@ -1,29 +1,33 @@
-# This document
+# Service Bus Guidelines
 
-Provides information about how we use Service Bus.
+This document provides information about how we use Service Bus.
 
-## Only topics
+## Use Topics Over Queues
 
-- Topics are used for pub/sub scenarios.
-- Queues cannot be tested and do not follow Open-Closed Principle (OCP)
+- Topics MUST be used for pub/sub scenarios.
+- Queues SHOULD NOT be used because they cannot be easily tested in multiple-consumer scenarios and do not follow the Open-Closed Principle (OCP).
 
 ## State and Events
 
-- We have exactly to types of topics: state and events.
-- State topics are named after the entity in plural Orders.
-- Events topics are named after the event in plural OrderEvents.
-- Schema for state topcis should be named after the entity in plural Orders_V1.yaml
-- Schema for events topics should be named after the event in plural OrderEvents_V1.yaml
-- Schema files should have the _V{version} suffix.
+- We have exactly two types of topics: **state** and **events**.
+- **State topics** are named after the entity in plural (e.g., `Orders`).
+- **Events topics** are named after the event type in plural (e.g., `OrderEvents`).
+- **State topic schemas** SHOULD be named after the entity in plural with a version suffix (e.g., `Orders_V1.yaml`).
+- **Event topic schemas** SHOULD be named after the event type in plural with a version suffix (e.g., `OrderEvents_V1.yaml`).
+- All schema files MUST have the `_V{version}` suffix.
 
 ## Publishing
-SessionId and PartitionKey should be set to the id of the entity
+
+- `SessionId` and `PartitionKey` SHOULD be set to the ID of the entity.
 
 ## Schemas
-The entity's id should be replicated inside the message body.
-ª
-## Events schema
- - Event schemas should have each event type as an optional property. That makes the schema easy to evolve.
+
+- The entity's ID SHOULD be replicated inside the message body.
+
+## Events Schema
+
+- Event schemas SHOULD have each event type as an optional property. This makes the schema easier to evolve.
+
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",

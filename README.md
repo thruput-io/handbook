@@ -1,15 +1,28 @@
-# handbook
-This repository contains guidlines and rules on how we build systems
+# Handbook
 
-# usage
+This repository contains guidelines and rules on how we build systems.
+
+## Usage
+
 1. Check out this project into your workspace directory as a sibling to your projects.
-1. Create a .junie folder in your project 
+2. Create a `.junie` folder in your project.
 
-## THEN
+### Configuration Options
 
-1. Softlink the .junie folder from this repository to your project `ln -s ../../.junie .`
+#### Option 1: Symlink the Entire .junie Folder
 
-## OR 
-1. Softlink the bootstrap_prompt.md file from this repository to .junie folder `ln -s ../../handbook/bootstrap_prompt.md .`
-1. Softlink the frontend_guidelines.md file from this repository to .junie folder `ln -s ../../handbook/frontend_guidelines.md .`
-1. Softlink the backend_guidelines.md file from this repository to .junie folder `ln -s ../../handbook/backend_guidelines.md .`
+Symlink the `.junie` folder from this repository to your project:
+
+```bash
+ln -s ../../.junie .
+```
+
+#### Option 2: Symlink Specific Guidelines
+
+Symlink individual files from this repository to your `.junie` folder:
+
+```bash
+ln -s ../../handbook/bootstrap_prompt.md .
+ln -s ../../handbook/frontend_guidelines.md .
+ln -s ../../handbook/backend_guidelines.md .
+```

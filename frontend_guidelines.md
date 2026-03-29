@@ -2,7 +2,7 @@
 
 ## 1. Normative Language
 
-The key words SHOULD, SHOULD NOT, SHOULD, and MAY are interpreted as defined in RFC 2119.
+The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, RECOMMENDED, MAY, and OPTIONAL are to be interpreted as described in RFC 2119.
 
 ## 2. Architecture
 
