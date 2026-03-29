@@ -40,7 +40,7 @@ Before performing ANY task:
    - Stop and alert if quality measuring tools is not functioning or covering all code
 
 7. You SHOULD NOT:
-   - Express optionality in any other way than by null; an empty string is never acceptable.
+   - Express optionality in any other way than by null/nil; an empty string is never acceptable.
    - Return or use a default value when failing.
    - Use a default value to satisfy a contract.
    - Disable linting rules via comments, pragmas, or similar (e.g., `// eslint-disable-next-line`, `@ts-ignore`, `/* @ts-expect-error */`).
@@ -56,10 +56,10 @@ Before performing ANY task:
    - Default to architectural discipline over brevity.
 
 9. It is common to think these guidelines do not always apply, they do, below are a list of situations where these guidelines MUST BE followed:
-   - It is just mock or test code that is not equally important so I can disregard strictness 
+   - It is just mock or test code that is not equally important, so I can disregard strictness 
    - This is just a prototype, I will add tests later
    - Since these safeguards are usually needed I will add them
-   - Since this way of doing stuff is standard I will follow it instead of being strict
+   - Since this way of doing stuff is standard, I will follow it instead of being strict
    - Following these guidelines would require a massive refactor
    - Since I cannot find a way to avoid this code warning, I will mute it
    - I can see guidelines are not followed in this codebase so it is not important I do
