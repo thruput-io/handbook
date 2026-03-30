@@ -38,6 +38,8 @@ Before performing ANY task:
    - Ensure every test asserts the actual returned values, not just that no error occurred.
    - Always add tests for new code
    - Stop and alert if quality measuring tools is not functioning or covering all code
+   - Refactor over Mocking in unit tests – If a component is challenging to set up for testing, do not reach for a mock. Instead, refactor the component to depend on smaller, more focused domain models or specific interfaces. 
+   - Treat the "Setup Pain" of a Unit test as architectural feedback, well-designed code should allow you to test business logic in isolation, without constructing irrelevant mocks.
 
 7. You SHOULD NOT:
    - Express optionality in any other way than by null/nil; an empty string is never acceptable.

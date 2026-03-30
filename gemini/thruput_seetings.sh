@@ -1,0 +1,3 @@
+GOOGLE_APPLICATION_CREDENTIALS=/Users/jonas/.config/gcloud/application_default_credentials.json
+GOOGLE_CLOUD_PROJECT=vllm-493911
+VERTEX_LOCATION=global
