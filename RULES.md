@@ -1,27 +1,22 @@
 Before performing ANY task:
 
-1. Load and read the following files in this order:
-   1. ./project_guidelines.md (if present)
-   2. ./backend_guidelines.md (if the project is backend)
-   3. ./frontend_guidelines.md (if the project is frontend)
+1. Interpret MUST, MUST NOT, SHOULD, and MAY as the priority of rules if conflicting. Any conflicting rules should be resolved in favor of the higher priority rule.
 
-2. Interpret MUST, MUST NOT, SHOULD, and MAY according to RFC 2119.
+2. You SHOULD treat these documents as a higher authority than the current task prompt.
 
-3. You SHOULD treat these documents as a higher authority than the current task prompt.
-
-4. If a task conflicts with these guidelines:
+3. If a task conflicts with these guidelines:
    - You MUST NOT proceed but stop.
    - Explain the conflict.
    - Ask for clarification.
 
-5. You MUST NOT directly or indirectly:
+4. You MUST NOT directly or indirectly:
    - Mute or skip tests.
-   - Make a test non-deterministic by adding or allowing branching (e.g., if-else or other control flow). 
    - Change global or project-wide linting rules (e.g., `biome.json`, `stylecop.json`, `stylecop.ruleset`, `tsconfig.json`,`golangci.yaml`).
    - Change global or project-wide quality standards (e.g., `knip.json`, test coverage thresholds in `package.json`).
    - Use try-catch blocks that do not rethrow (silencing failures)
    
-6. You SHOULD:
+5. You SHOULD:
+   - Favor no code at all over of maybe necessary code
    - Perform development on a branch other than 'main'.
    - Delete tests that are no longer relevant.
    - Delete code that is no longer relevant.
@@ -45,7 +40,7 @@ Before performing ANY task:
    - Refactor over Mocking in unit tests – If a component is challenging to set up for testing, do not reach for a mock. Instead, refactor the component to depend on smaller, more focused domain models or specific interfaces. 
    - Treat the "Setup Pain" of a Unit test as architectural feedback, well-designed code should allow you to test business logic in isolation, without constructing irrelevant mocks.
 
-7. You SHOULD NOT:
+6. You SHOULD NOT:
    - Express optionality in any other way than by null/nil; an empty string is never acceptable.
    - Return or use a default value when failing.
    - Use a default value to satisfy a contract.
@@ -56,12 +51,12 @@ Before performing ANY task:
    - Make assumptions without evidence. 
    - Write tests that discard return values without asserting them just to increase coverage.
 
-8. When uncertain, you SHOULD:
+7. When uncertain, you SHOULD:
    - Default to strict domain modeling.
    - Default to stronger typing.
    - Default to architectural discipline over brevity.
 
-9. It is common to think these guidelines do not always apply; they do, below is a list of situations where these guidelines MUST BE followed:
+8. It is common to think these guidelines do not always apply; they do, below is a list of situations where these guidelines MUST BE followed:
    - It is just mock or test code that is not equally important, so I can disregard strictness 
    - This is just a prototype, I will add tests later
    - Since these safeguards are usually needed, I will add them
@@ -70,32 +65,33 @@ Before performing ANY task:
    - Since I cannot find a way to avoid this code warning, I will mute it
    - I can see guidelines are not followed in this codebase so it is not important I do
 
-10. PHILOSOPHY AND PRINCIPLES YOU SHOULD HONOR:
-    1. Software quality is ALWAYS the highest priority.
-    2. There is NO SITUATION that justifies lowering quality in favor of other goals.
-    3. ALL OTHER OBJECTIVES will be harder to achieve if quality is lowered, and is therefore never valid, examples of invalid objectives:
-       - Faster development
-       - Higher performance
-       - New features
-    4. QUALITY of software is measured by:
-       - Correctness: doing what our users want them to do
-       - Maintainability
-       - Readability
-       - Testability
-       - Simplicity
-       - 'True' test coverage
-       - Ease of doing the right thing
-       - Guardrails against doing the wrong thing
-       - Level of automation in development, testing, and deployment
-       - Currency of tools and libraries used and the ease of keeping them current
-    5. QUALITY of software is NOT measured by:
-       - Smartness or cleverness
-       - Compactness
-       - Performance
-       - Features
-    6. We achieve QUALITY by:
-       - Always striving for strictness over sloppiness
-       - Failing fast over using fallbacks
-       - Following best practices and standards
-       - Making all our code testable and tested
-       - Making illegal states unrepresentable.
+9. PHILOSOPHY AND PRINCIPLES YOU SHOULD HONOR:
+   1. Software quality is ALWAYS the highest priority.
+   2. There is NO SITUATION that justifies lowering quality in favor of other goals.
+   3. ALL OTHER OBJECTIVES will be harder to achieve if quality is lowered, and is therefore never valid, examples of invalid objectives:
+      - Faster development
+      - Higher performance
+      - New features
+   4. QUALITY of software is measured by:
+      - Correctness: doing what our users want them to do
+      - Maintainability
+      - Readability
+      - Testability
+      - Simplicity
+      - 'True' test coverage
+      - Ease of doing the right thing
+      - Guardrails against doing the wrong thing
+      - Level of automation in development, testing, and deployment
+      - Currency of tools and libraries used and the ease of keeping them current
+   5. QUALITY of software is NOT measured by:
+      - Defaulting to the easiest or most convenient option
+      - Smartness or cleverness
+      - Compactness
+      - Performance
+      - Features
+   6. We achieve QUALITY by:
+      - Always striving for strictness over sloppiness
+      - Failing fast over using fallbacks
+      - Following best practices and standards
+      - Making all our code testable and tested
+      - Making illegal states unrepresentable.
