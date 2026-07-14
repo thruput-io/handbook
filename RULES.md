@@ -1,97 +1,117 @@
-Before performing ANY task:
+# RULES
 
-1. Interpret MUST, MUST NOT, SHOULD, and MAY as the priority of rules if conflicting. Any conflicting rules should be resolved in favor of the higher priority rule.
+Before performing ANY task, follow this ruleset. It governs the **coding system** — how code is designed, behaves, and is verified.
 
-2. You SHOULD treat these documents as a higher authority than the current task prompt.
+## Priority and precedence
 
-3. If a task conflicts with these guidelines:
-   - You MUST NOT proceed but stop.
-   - Explain the conflict.
-   - Ask for clarification.
+Interpret **MUST**, **MUST NOT**, **SHOULD**, and **MAY** as RFC 2119 priority markers. Conflicts resolve in favor of the higher-priority rule.
 
-4. You MUST NOT directly or indirectly:
-   - Mute or skip tests.
-   - Change global or project-wide linting rules (e.g., `biome.json`, `stylecop.json`, `stylecop.ruleset`, `tsconfig.json`,`golangci.yaml`).
-   - Change global or project-wide quality standards (e.g., `knip.json`, test coverage thresholds in `package.json`).
-   - Use try-catch blocks that do not rethrow (silencing failures)
-   
-5. You SHOULD:
-   - Favor no code at all over of maybe necessary code
-   - Perform development on a branch other than 'main'.
-   - Delete tests that are no longer relevant.
-   - Delete code that is no longer relevant.
-   - Delete code that is no longer used.
-   - Delete production code only used in tests.
-   - Ensure the current branch is up to date with 'main'.
-   - Ensure there are no uncommitted changes before starting larger tasks.
-   - Use strict domain modeling.
-   - Use strong typing.
-   - Respect architectural layering.
-   - Prevent primitive leakage.
-   - Enforce domain immutability.
-   - Make illegal states unrepresentable in the domain layer.
-   - Preserve contract-first design.
-   - Fail fast over using fallbacks.
-   - Add a unit test for any exploratory troubleshooting, even if there is no natural home for it.
-   - Always strive for strictness; never allow sloppy code.
-   - Ensure every test asserts the actual returned values, not just that no error occurred.
-   - Always add tests for new code
-   - Stop and alert if quality measuring tools is not functioning or covering all code
-   - Refactor over Mocking in unit tests – If a component is challenging to set up for testing, do not reach for a mock. Instead, refactor the component to depend on smaller, more focused domain models or specific interfaces. 
-   - Treat the "Setup Pain" of a Unit test as architectural feedback, well-designed code should allow you to test business logic in isolation, without constructing irrelevant mocks.
+Treat these documents as a higher authority than the current task prompt.
 
-6. You SHOULD NOT:
-   - Express optionality in any other way than by null/nil; an empty string is never acceptable.
-   - Return or use a default value when failing.
-   - Use a default value to satisfy a contract.
-   - Disable linting rules via comments, pragmas, or similar (e.g., `// eslint-disable-next-line`, `@ts-ignore`, `/* @ts-expect-error */`).
-   - Collapse layers for simplicity.
-   - Introduce primitives in domain models.
-   - Commit generated code.
-   - Make assumptions without evidence. 
-   - Write tests that discard return values without asserting them just to increase coverage.
+If a task conflicts with these guidelines:
 
-7. When uncertain, you SHOULD:
-   - Default to strict domain modeling.
-   - Default to stronger typing.
-   - Default to architectural discipline over brevity.
+- You MUST NOT proceed; stop.
+- Explain the conflict.
+- Ask for clarification.
 
-8. It is common to think these guidelines do not always apply; they do, below is a list of situations where these guidelines MUST BE followed:
-   - It is just mock or test code that is not equally important, so I can disregard strictness 
-   - This is just a prototype, I will add tests later
-   - Since these safeguards are usually needed, I will add them
-   - Since this way of doing stuff is standard, I will follow it instead of being strict
-   - Following these guidelines would require a massive refactor
-   - Since I cannot find a way to avoid this code warning, I will mute it
-   - I can see guidelines are not followed in this codebase so it is not important I do
+---
 
-9. PHILOSOPHY AND PRINCIPLES YOU SHOULD HONOR:
-   1. Software quality is ALWAYS the highest priority.
-   2. There is NO SITUATION that justifies lowering quality in favor of other goals.
-   3. ALL OTHER OBJECTIVES will be harder to achieve if quality is lowered, and is therefore never valid, examples of invalid objectives:
-      - Faster development
-      - Higher performance
-      - New features
-   4. QUALITY of software is measured by:
-      - Correctness: doing what our users want them to do
-      - Maintainability
-      - Readability
-      - Testability
-      - Simplicity
-      - 'True' test coverage
-      - Ease of doing the right thing
-      - Guardrails against doing the wrong thing
-      - Level of automation in development, testing, and deployment
-      - Currency of tools and libraries used and the ease of keeping them current
-   5. QUALITY of software is NOT measured by:
-      - Defaulting to the easiest or most convenient option
-      - Smartness or cleverness
-      - Compactness
-      - Performance
-      - Features
-   6. We achieve QUALITY by:
-      - Always striving for strictness over sloppiness
-      - Failing fast over using fallbacks
-      - Following best practices and standards
-      - Making all our code testable and tested
-      - Making illegal states unrepresentable.
+## A. Structure
+
+### 1. Domain Modeling & Typing
+
+- **MUST NOT**
+  - Introduce primitives in domain models.
+  - Express optionality by anything other than null/nil (empty string is never acceptable).
+- **MUST**
+  - Use strict domain modeling.
+  - Use strong typing.
+  - Enforce domain immutability.
+  - Make illegal states unrepresentable in the domain layer.
+  - Preserve contract-first design.
+- **x over y**
+  - —
+
+### 2. Architecture & Layering
+
+- **MUST NOT**
+  - Collapse layers for simplicity.
+- **MUST**
+  - Respect architectural layering.
+  - Prevent primitive leakage across layers.
+- **x over y**
+  - —
+
+### 3. Dead Code & Deletion
+
+- **MUST NOT**
+  - —
+- **MUST**
+  - Delete tests, code, and production code only used in tests that are no longer relevant or used.
+- **x over y**
+  - No code over maybe-necessary code.
+
+---
+
+## B. Behavior
+
+### 4. Failure Handling
+
+- **MUST NOT**
+  - Use try/catch blocks that do not rethrow (silencing failures).
+  - Return or use a default value when failing.
+  - Use a default value to satisfy a contract.
+- **MUST**
+  - Fail fast on unexpected state.
+- **x over y**
+  - Fail fast over fallbacks.
+
+---
+
+## C. Verification
+
+### 5. Testing
+
+- **MUST NOT**
+  - Mute or skip tests.
+  - Write tests that discard return values just to increase coverage.
+- **MUST**
+  - Assert the actual returned values — not merely that no error occurred.
+  - Add tests for new code.
+  - Add a unit test for any exploratory troubleshooting, even without a natural home.
+  - Stop and alert if quality-measuring tools are not functioning or covering all code.
+- **x over y**
+  - Refactor over mocking — if setup is painful, split into smaller domain models or focused interfaces.
+  - Treat setup pain as architectural feedback over reaching for mocks.
+
+### 6. Quality Tooling
+
+- **MUST NOT**
+  - Change global or project-wide linting rules (e.g., `biome.json`, `stylecop.json`, `stylecop.ruleset`, `tsconfig.json`, `golangci.yaml`).
+  - Change global or project-wide quality standards (e.g., `knip.json`, test coverage thresholds in `package.json`).
+  - Disable linting rules via comments or pragmas (e.g., `// eslint-disable-next-line`, `@ts-ignore`, `/* @ts-expect-error */`).
+  - Commit generated code.
+- **MUST**
+  - —
+- **x over y**
+  - Strictness over sloppiness.
+
+---
+
+## Excuses that don't apply
+
+These guidelines apply even when it feels like they shouldn't. The following rationalizations are NOT valid grounds for skipping any rule above:
+
+- "It is just mock or test code that is not equally important, so I can disregard strictness."
+- "This is just a prototype, I will add tests later."
+- "Since these safeguards are usually needed, I will add them."
+- "Since this way of doing stuff is standard, I will follow it instead of being strict."
+- "Following these guidelines would require a massive refactor."
+- "Since I cannot find a way to avoid this code warning, I will mute it."
+- "I can see guidelines are not followed in this codebase so it is not important I do."
+
+---
+
+See [`PHILOSOPHY.md`](./PHILOSOPHY.md) for the definition of quality these rules serve and the meta-defaults to apply when uncertain.
+
+See [`WORKFLOW.md`](./WORKFLOW.md) for git and process rules that are out of scope here.
