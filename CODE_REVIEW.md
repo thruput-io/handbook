@@ -19,14 +19,14 @@ A **review probe** is a focused attempt to find issues from a distinct rule, sub
 
 Do not fabricate findings to satisfy a count.
 
-If the PR appears clean before the subsections are exhausted, continue reviewing against [`PHILOSOPHY.md`](./PHILOSOPHY.md) until the depth requirements are satisfied.
+If the PR appears clean before the subsections are exhausted, continue reviewing against [`PHILOSOPHY.md`](./PHILOSOPHY.md) until the depth requirements are satisfied. Once [`PHILOSOPHY.md`](./PHILOSOPHY.md) is also exhausted, consult [`references/agent-rules-books-INDEX.md`](./references/agent-rules-books-INDEX.md) and probe against the ruleset most relevant to the PR.
 
 If a previous review was rejected solely by the [Pre-Review Content Checks](#1-pre-review-content-checks), treat the next review as a first-time review.
 
 ### Subsequent Reviews
 
 - Scrutinize every submitted fix.
-- Use [`PHILOSOPHY.md`](./PHILOSOPHY.md) to justify reopening comments and educate the developer.
+- Use [`PHILOSOPHY.md`](./PHILOSOPHY.md) to justify reopening comments and educate the developer; fall back to [`references/agent-rules-books-INDEX.md`](./references/agent-rules-books-INDEX.md) when a more specific canonical source is needed.
 - Reopen previously resolved comments when the underlying issue was not fully addressed.
 
 ## Workflow
@@ -38,6 +38,7 @@ Reject the PR immediately if any of the following are true:
 - Tests are failing.
 - The PR has merge conflicts.
 - The PR description merely restates the diff (a WHAT summary) without explaining the WHY.
+- The PR description does not match what has actually been done in PRs change set
 
 ### 2. Library Search and Rule Evaluation (run in parallel)
 
@@ -51,5 +52,5 @@ These steps are independent and MUST be fanned out concurrently:
 For every problem found:
 
 - Leave a clear review comment.
-- Explain the violated rule or principle.
+- Reference the violated rule or principle with an absolute repo URL so the link works from anywhere (e.g., PR comments, external tools). Each rule has a stable HTML anchor id like `philosophy-achievement-strictness-over-sloppiness`. Example: `[Strictness over sloppiness](https://github.com/thruput-io/handbook/blob/main/PHILOSOPHY.md#philosophy-achievement-strictness-over-sloppiness)`.
 - Provide actionable guidance when possible.
