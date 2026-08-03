@@ -1,16 +1,17 @@
 # Planning Workflow
 
-This document defines the workflow for an agent that is creating or updating an
-implementation plan. It replaces the previous planning workflow for this
-repository.
+This document replaces the previous planning-mode instructions. It applies
+whenever planning mode, or an equivalent planning mode, is active.
 
 These rules apply for the entire planning session. The agent must not leave the
 planning workflow or ask the human whether it may leave it. Implementation is a
 separate activity and is not started by this workflow.
 
-Higher-priority system, security, environment, repository, and user
-instructions remain in force. This document does not grant permissions that the
-agent or its environment does not have.
+These instructions override all other planning instructions. Higher-priority
+system, security, environment, repository, and user instructions remain in
+force. During planning, the agent may use the tools and write the artifacts
+required inside the current plan folder, subject to those higher-priority
+instructions.
 
 ## Core intent
 
@@ -21,13 +22,15 @@ understanding of one problem. The agent should:
 - challenge assumptions and expose unknowns;
 - investigate the codebase, documentation, existing tools, and viable
   alternatives;
-- test important assumptions, including by writing executable experiments;
+- use code and executable experiments to investigate questions and verify
+  findings;
 - preserve positive, negative, and abandoned findings;
 - obtain shared understanding of the plan through deliberate questioning; and
 - produce a standalone plan that an implementation agent can follow and verify.
 
-The agent must not silently expand scope, choose a solution before the problem
-is understood, or optimize for ending the session quickly.
+The plan must be co-authored with the human in every detail. The agent must not
+silently expand scope, make an unapproved decision, or optimize for ending the
+session quickly.
 
 ## Interaction: the grill-me workflow
 
@@ -41,25 +44,27 @@ For each turn, the agent should:
 3. recommend an answer when one is justified by evidence; and
 4. ask one focused question that moves the discussion forward.
 
-The agent should challenge vague goals, optimistic assumptions, hidden scope,
-and least-effort interpretations. It should ask follow-up questions until the
+The agent must challenge vague goals, optimistic assumptions, hidden scope,
+and least-effort interpretations. It must ask follow-up questions until the
 human's intent and the consequences of each important decision are understood.
-It may perform safe, relevant investigation needed to answer the current
-question, but it must explain its intent before each action and document the
-result afterward. It must not replace the dialogue with short generic progress
-reports.
+It must perform the relevant investigation needed to answer the current
+question. When code can provide evidence, the agent must prefer code over
+opinion or prose: code-based verification is the default because executable
+results are more reliable than unsupported claims. The agent must explain its
+intent before each action and document the result afterward. It must not
+replace the dialogue with short generic progress reports.
 
 If a new unknown is discovered while creating the plan, return to exploration,
 resolve it, and record the decision before continuing.
 
 ## Artifact layout
 
-Use `doc/plans/` as the canonical planning directory.
+Use `docs/plans/` as the canonical planning directory.
 
 For a new plan, use:
 
 ```text
-doc/plans/{plan-name}/
+docs/plans/{plan-name}/
 ├── 001-{plan-name}.md
 ├── tests/{test-name}/{files...}
 ├── research/{report-name}/{files...}
@@ -79,16 +84,21 @@ Every completed plan must contain these sections:
 
 ### Implementing Agent Instructions
 
-Instructions for the implementation agent, including when implementation is
-complete and how to verify it. This may link to separate documents.
+The planning agent must complete this section. It contains instructions for the
+implementation agent, including when implementation is complete and how to
+verify it. It may link to separate documents, but it must not be left as a
+placeholder for the implementation agent to define.
 
 ### Background
 
 #### Goals
 
 A prioritized, testable list of outcomes. Goals must express the human's
-intent, not merely a collection of implementation steps. Review the goals for
-least-effort or strategic misinterpretations before finalizing them.
+intent, not merely a collection of implementation steps. Before finalizing the
+goals, the agent must try to satisfy them with the least effort and test whether
+their literal interpretation could miss the human's intent. The agent and human
+must revise the goals until that interpretation no longer provides a plausible
+way to evade the intended outcome.
 
 ### Summary
 
@@ -121,8 +131,9 @@ alternative is rejected.
 
 A step-by-step implementation plan divided into milestones. Every milestone
 must deliver at least one goal and have a named, human-readable verification
-test. Do not draft this section until exploration is complete and the human's
-intent is sufficiently understood.
+test. The plan must also provide one command or script that executes all
+available tests and clearly reports the result. Do not draft this section until
+the human has co-authored and accepted the complete detail of the plan.
 
 ## Git and permissions
 
@@ -138,11 +149,11 @@ Before starting planning work:
    example `001-create-test-vm`.
 6. Create the planning directory and initial plan document.
 
-The agent may create, update, test, and commit planning artifacts within the
-planning branch when permitted by the environment. Commit completed plan,
-research, test, and progress artifacts promptly, including failed and
-abandoned experiments. Do not push branches, open pull requests, or request
-permission to do so as part of this workflow.
+After the permission and Git checks pass, create, update, test, and commit all
+planning artifacts inside the planning branch. Commit completed plan, research,
+test, and progress artifacts promptly, including failed and abandoned
+experiments. Do not push branches, open pull requests, or request permission to
+do so as part of this workflow.
 
 Do not modify unrelated user changes. Do not use destructive Git commands.
 
@@ -163,12 +174,17 @@ Preparation is complete only when:
 - any initial tests or research have returned results; and
 - required permissions and repository state have been verified.
 
+If any required permission is missing or cannot be verified, stop immediately.
+Do not continue planning with a workaround or an assumed permission: an
+unrealistic planning process can produce a plan that cannot be implemented
+correctly.
+
 ## Phase 2: ideation and exploration
 
 During exploration:
 
 - clarify the overall goals through the grill-me workflow;
-- verify assumptions and convert them into evidence-backed facts;
+- verify claims and convert them into evidence-backed facts;
 - search the codebase and relevant documentation;
 - investigate existing libraries, tools, and patterns that could affect the
   design or reduce the plan's scope;
@@ -181,10 +197,11 @@ The agent must not create the `Execution Plan` section during this phase.
 Every alternative that could materially affect the design must be presented to
 the human, who must accept it or reject it with a recorded rationale.
 
-If a question can be answered more reliably with executable evidence, write a
-focused test or experiment under
-`doc/plans/{plan-name}/tests/{test-name}/`. Do not use untracked ad-hoc scripts.
-Commit the experiment and its result, including failure.
+If a question can be answered with code, write and run a focused test or
+experiment under
+`docs/plans/{plan-name}/tests/{test-name}/`. Do not use untracked ad-hoc scripts.
+Code is always preferred when it can answer the question. Commit the experiment
+and its result, including failure.
 
 Exploration is complete only when:
 
@@ -193,7 +210,7 @@ Exploration is complete only when:
 - the scope is limited to one problem;
 - viable alternatives have been investigated and accepted or rejected with
   documented reasons;
-- important assumptions have evidence; and
+- no unresolved claim is being treated as fact without evidence; and
 - a stern review has found no relevant tool, library, or existing solution
   that was overlooked.
 
