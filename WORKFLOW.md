@@ -2,62 +2,62 @@
 
 Process rules that are out of scope for [`RULES.md`](./RULES.md) (which covers the coding system only). These govern how work is set up and moved through git.
 
-Same RFC 2119 priority markers as `RULES.md`. Each rule has a short human-readable heading and a stable HTML anchor id like `workflow-git-hygiene-no-refactor-feature-mix`.
+Same RFC 2119 priority markers and the same anchor convention as [`RULES.md`](./RULES.md#priority-and-precedence): the heading text, lowercased, punctuation dropped, spaces replaced by hyphens. Cite a rule with an absolute URL: `https://github.com/thruput-io/handbook/blob/main/WORKFLOW.md#tests-before-code`.
 
 ## A. Process
 
 ### 1. Git Hygiene
 
-#### No refactor + feature mix <a id="workflow-git-hygiene-no-refactor-feature-mix"></a>
+#### No refactor and feature mix
 
 **MUST NOT** — Mix refactoring with new features on the same branch.
 
-#### No mixed feature branches <a id="workflow-git-hygiene-no-mixed-feature-branches"></a>
+#### No mixed feature branches
 
 **MUST NOT** — Mix features that could have been separated into branches.
 
-#### Refuse wrong branch purpose <a id="workflow-git-hygiene-refuse-wrong-branch-purpose"></a>
+#### Refuse wrong branch purpose
 
 **MUST** — Stop human by refusing new feature / refactoring on a branch started for something else.
 
-#### Not on main branch <a id="workflow-git-hygiene-not-main-branch"></a>
+#### Not on main branch
 
 **MUST** — Develop on a branch other than `main`.
 
-#### Up to date with main <a id="workflow-git-hygiene-up-to-date-with-main"></a>
+#### Up to date with main
 
 **MUST** — Keep the current branch up to date with `main`.
 
-#### Clean before large task <a id="workflow-git-hygiene-clean-before-large-task"></a>
+#### Clean before large task
 
 **MUST** — Ensure there are no uncommitted changes before starting larger tasks.
 
-#### Ask over guess branch purpose <a id="workflow-git-hygiene-ask-over-guess-branch-purpose"></a>
+#### Ask over guess branch purpose
 
 **PREFER** — Stop and ask instead of guessing the branch purpose.
 
-#### Merge related over post-split <a id="workflow-git-hygiene-merge-related-branches-over-post-split"></a>
+#### Merge related over post-split
 
 **PREFER** — Merge related branches instead of post-splitting work.
 
 ### 2. Evidence
 
-#### No changes without evidence <a id="workflow-evidence-no-changes-without-evidence"></a>
+#### No changes without evidence
 
 **MUST NOT** — Make code changes without evidence.
 
-#### No assumptions without evidence <a id="workflow-evidence-no-assumptions-without-evidence"></a>
+#### No assumptions without evidence
 
 **MUST NOT** — Make assumptions without evidence.
 
-#### Tests before code <a id="workflow-evidence-tests-before-code"></a>
+#### Tests before code
 
 **MUST** — Write tests proving assumptions before writing code.
 
-#### Platform tests over later <a id="workflow-evidence-platform-tests-over-later"></a>
+#### Platform tests over later
 
 **PREFER** — Pin assumptions by 'platform' or 'framework' tests over waiting until later.
 
-#### Risk assumptions in plan <a id="workflow-evidence-risk-assumptions-in-plan"></a>
+#### Risk assumptions in plan
 
 **PREFER** — Add a test assumptions section to any plan with risk.

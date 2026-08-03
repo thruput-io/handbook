@@ -21,7 +21,7 @@ Do not fabricate findings to satisfy a count.
 
 If the PR appears clean before the subsections are exhausted, continue reviewing against [`PHILOSOPHY.md`](./PHILOSOPHY.md) until the depth requirements are satisfied. Once [`PHILOSOPHY.md`](./PHILOSOPHY.md) is also exhausted, consult [`references/agent-rules-books-INDEX.md`](./references/agent-rules-books-INDEX.md) and probe against the ruleset most relevant to the PR.
 
-If a previous review was rejected solely by the [Pre-Review Content Checks](#1-pre-review-content-checks), treat the next review as a first-time review.
+If a previous review was rejected solely by the [Pre-Review Content Checks](#2-pre-review-content-checks), treat the next review as a first-time review.
 
 ### Subsequent Reviews
 
@@ -31,7 +31,7 @@ If a previous review was rejected solely by the [Pre-Review Content Checks](#1-p
 
 ## Workflow
 
-K### 1. Setup
+### 1. Setup
 
 Check auth (do not prompt unless needed):
 
@@ -76,7 +76,7 @@ For multi-line comments add `start_line` and `start_side`.
 For every problem found:
 
 - Comment that explains the violation. Keep it short.
-- MUST reference the violated rule or principle with an absolute repo URL so the link works from anywhere (e.g., PR comments, external tools). Each rule has a stable HTML anchor id like `philosophy-achievement-strictness-over-sloppiness`. Example: `[Strictness over sloppiness](https://github.com/thruput-io/handbook/blob/main/PHILOSOPHY.md#philosophy-achievement-strictness-over-sloppiness)`.
+- MUST reference the violated rule or principle with an absolute repo URL so the link works from anywhere (e.g., PR comments, external tools). Each rule's anchor is its heading text, lowercased, punctuation dropped, spaces replaced by hyphens. Example: `[Strictness over sloppiness](https://github.com/thruput-io/handbook/blob/main/PHILOSOPHY.md#strictness-over-sloppiness)`.
 - MUST NOT provide actionable guidance.
 
 ### 5. Submit as a Single Review
