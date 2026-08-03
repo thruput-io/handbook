@@ -26,3 +26,14 @@ ln -s ../../handbook/bootstrap_prompt.md .
 ln -s ../../handbook/frontend_guidelines.md .
 ln -s ../../handbook/backend_guidelines.md .
 ```
+
+## Skills
+
+Skills live in [`thruput-io/skills`](https://github.com/thruput-io/skills), not here. They
+reference the documents in this repository rather than copying them, so the handbook stays the
+single source of truth.
+
+| Skill | Handbook document it follows |
+|---|---|
+| `planning` | [`PLANNING.md`](./PLANNING.md) + [`PLAN_TEMPLATE.md`](./PLAN_TEMPLATE.md) |
+| `pr-review` | [`CODE_REVIEW.md`](./CODE_REVIEW.md) |
