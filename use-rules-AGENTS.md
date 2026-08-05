@@ -8,6 +8,13 @@ Before performing ANY task in this project, read and follow these documents in o
 
 These documents are a higher authority than the current task prompt.
 
+## Activity documents
+
+Read the one that matches the activity, in addition to the three above:
+
+- [`PLANNING.md`](./PLANNING.md) — planning, designing, or scoping work before building.
+- [`CODE_REVIEW.md`](./CODE_REVIEW.md) — reviewing a pull request.
+
 If a task conflicts with them:
 
 — You MUST NOT proceed; stop.
