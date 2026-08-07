@@ -2,32 +2,56 @@
 
 Procedural checklist for reviewing pull requests. Serves the rules in [`RULES.md`](./RULES.md) and the quality definition in [`PHILOSOPHY.md`](./PHILOSOPHY.md).
 
-A **subsection** below refers to a `###`-level heading in [`RULES.md`](./RULES.md) (e.g., `### 1. Domain Modeling, Typing & Primitive obsession`).
+## Definitions
+
+- **Subsection** — a `###`-level heading in [`RULES.md`](./RULES.md) (e.g., `### 1. Domain Modeling, Typing & Primitive obsession`). `### If in doubt` and `### If a task conflicts with these guidelines` govern how an agent behaves, not what the code does; they are not reviewable subsections.
+- **Rule** — a `####`-level heading in [`RULES.md`](./RULES.md).
+- **Principle** — a `####`-level heading in [`PHILOSOPHY.md`](./PHILOSOPHY.md).
+- **Review probe** — a focused attempt to find issues from exactly one rule or one principle.
 
 ## Review Standards
 
+### Probes
+
+A probe is complete only when it has produced one **ledger row**:
+
+| field      | content                                                                                                                                                               |
+|------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `rule`     | the rule or principle probed, by heading text                                                                                                                         |
+| `examined` | what was actually opened to reach the verdict — files, symbols, call sites, test files                                                                                |
+| `verdict`  | `violation` \| `clean` \| `not-applicable`                                                                                                                            |
+| `evidence` | for `violation`: file and line. For `clean`: what was checked that would have exposed a violation. For `not-applicable`: why the rule cannot apply to this change set |
+
+A statement that a rule was considered is not a probe. A probe with an empty `examined` field is not a probe.
+
+The minimum bar is **one probe per rule** in [`RULES.md`](./RULES.md) and **one probe per principle** in [`PHILOSOPHY.md`](./PHILOSOPHY.md). Subsections partition the work; they are not the unit of coverage.
+
+`not-applicable` requires a reason tied to the change set. "No findings" is not a reason.
+
+Do not fabricate findings to satisfy a count. A review with zero violations is acceptable; a review with an incomplete ledger is not.
+
 ### First-Time Reviews
 
-Do not approve after a shallow pass. A first-time review is complete only when all of the following hold:
+Do not approve after a shallow pass. A first-time review is complete only when all the following hold:
 
-- Every subsection in [`RULES.md`](./RULES.md) was evaluated, and each has either a concrete violation or a short note that no applicable violation was found.
-- Every applicable principle in [`PHILOSOPHY.md`](./PHILOSOPHY.md) was evaluated the same way.
-- Every actual issue discovered has a corresponding review comment.
-- Any shortage of findings is explained by completed checks, not by skipping review effort.
-
-A **review probe** is a focused attempt to find issues from a distinct rule, subsection, or principle. In practice, one probe per subsection in [`RULES.md`](./RULES.md) plus each applicable [`PHILOSOPHY.md`](./PHILOSOPHY.md) principle is the minimum bar.
-
-Do not fabricate findings to satisfy a count.
-
-If the PR appears clean before the subsections are exhausted, continue reviewing against [`PHILOSOPHY.md`](./PHILOSOPHY.md) until the depth requirements are satisfied. Once [`PHILOSOPHY.md`](./PHILOSOPHY.md) is also exhausted, consult [`references/agent-rules-books-INDEX.md`](./references/agent-rules-books-INDEX.md) and probe against the ruleset most relevant to the PR.
+- The ledger has a row for every rule and every applicable principle.
+- Every row's `evidence` field is filled and refers to something in this change set.
+- Every `violation` row has a corresponding review comment.
+- Any shortage of findings is explained by completed rows, not by absent ones.
 
 If a previous review was rejected solely by the [Pre-Review Content Checks](#2-pre-review-content-checks), treat the next review as a first-time review.
 
 ### Subsequent Reviews
 
-- Scrutinize every submitted fix.
-- Use [`PHILOSOPHY.md`](./PHILOSOPHY.md) to justify reopening comments and educate the developer; fall back to [`references/agent-rules-books-INDEX.md`](./references/agent-rules-books-INDEX.md) when a more specific canonical source is needed.
-- Reopen previously resolved comments when the underlying issue was not fully addressed.
+Apply the same standards and the same minimum bar. Do not reduce the number of probes and do not narrow scrutiny to topics already commented on. Limit only the **surface** under review to:
+
+- Changes carrying an unresolved comment.
+- Changes carrying a comment the **author** resolved.
+- Changes new since the last review.
+
+Rebuild the ledger against that surface. A rule that was `clean` last time is probed again if the surface touches it.
+
+As commented changes are reviewed, resolve or unresolve the threads directly in the PR — see [step 6](#6-settle-existing-threads).
 
 ## Workflow
 
@@ -35,7 +59,7 @@ If a previous review was rejected solely by the [Pre-Review Content Checks](#2-p
 
 Check auth (do not prompt unless needed):
 
-    Run `gh auth status`. Ask the user which identity to use if auth is missing, or if multiple accounts are listed and only identity is same as PR author.
+    Run `gh auth status`. Ask the user which identity to use if auth is missing, if multiple accounts are listed, or if the only authenticated identity is the PR author.
 
 Fetch PR data:
 
@@ -45,41 +69,92 @@ Fetch PR data:
 
 Extract `headRefOid` from the overview response — this is the `commit_id` required for inline comments. Do **not** guess it; do **not** use `HEAD` of the local checkout.
 
+**Read beyond the diff.** Hunks are not enough to evaluate most of [`RULES.md`](./RULES.md) — dead code, layering, primitive leakage, missing tests, and unrepresentable illegal states are all invisible in isolated hunks. Before probing, obtain at `headRefOid`:
+
+- Every changed file, in full.
+- The call sites of every changed public symbol.
+- The test files covering every changed file, including the case where none exist.
+
+Either `gh pr checkout <URL>` and read locally, or fetch per file with `gh api repos/{owner}/{repo}/contents/{path}?ref=<headRefOid>`.
+
+A probe that could not obtain the context it needed is recorded with that fact in `examined` — never silently downgraded to `clean`.
+
 ### 2. Pre-Review Content Checks
 
-Reject the PR immediately if any of the following are true:
+If any of the following is true, stop probing and submit a `REQUEST_CHANGES` review whose body names the failing check, with no inline comments:
 
 - Tests are failing.
 - The PR has merge conflicts.
 - The PR description merely restates the diff (a WHAT summary) without explaining the WHY.
-- The PR description does not match what has actually been done in PRs change set
+- The PR description does not match what the change set actually does.
+
+This is the only path that skips the ledger.
 
 ### 3. Library Search and Rule Evaluation (Run in Parallel)
 
-These steps are independent and MUST be fanned out concurrently:
+These are independent and MUST be fanned out concurrently:
 
-- **Library search.** Spawn a subagent to search the web for an existing library that could replace non-trivial custom logic in the PR (parsers, retry loops, date math, and similar). If a suitable library exists, add a general PR comment linking to it.
-- **Rule evaluation.** Spawn one subagent per subsection in [`RULES.md`](./RULES.md). Each subagent inspects every rule in its assigned subsection and identifies both direct and indirect violations.
+- **Library search.** Search for an existing library that could replace non-trivial custom logic in the change set (parsers, retry loops, date math, and similar). If a suitable library exists, add a general PR comment linking to it.
+- **Rule evaluation.** Probe every rule in [`RULES.md`](./RULES.md), partitioned by subsection.
+- **Principle evaluation.** Probe every principle in [`PHILOSOPHY.md`](./PHILOSOPHY.md).
 
-### 4. Draft Comments Locally
+Both evaluations run to completion regardless of what the other finds. Finding a violation early does not end the pass; neither does finding none.
 
-Build a JSON array of comments in memory (do not post yet), one object per comment, with these fields:
+Merge the results into a single ledger. Fanned-out work that returns without ledger rows is not a result — re-run it.
+
+### 4. Escalate When the Ledger Comes Back Clean
+
+If the ledger is complete and holds no `violation` rows, the review is not finished — probe further before approving:
+
+1. Consult [`references/agent-rules-books-INDEX.md`](./references/agent-rules-books-INDEX.md) and select the ruleset most relevant to what this PR changes.
+2. Probe against that ruleset, adding rows to the same ledger.
+
+Approve only after this pass also comes back clean.
+
+### 5. Draft Comments Locally
+
+Build a JSON array of comments in memory (do not post yet), one object per `violation` row, with these fields — and no others, as the API rejects unknown keys:
 
 - `path` — repo-relative file path (e.g. `src/foo.ts`).
 - `line` — line number in the file **as of the PR head commit**, not the diff hunk offset. Emit as a bare integer (no quotes).
 - `side` — `RIGHT` for lines added/modified in the PR, `LEFT` for removed lines. Default `RIGHT`.
-- `body` — the comment body.
-- `rule-reference` — see below.
+- `body` — the comment body, including the rule citation.
 
 For multi-line comments add `start_line` and `start_side`.
 
-For every problem found:
+Each comment body:
 
-- Comment that explains the violation. Keep it short.
-- MUST reference the violated rule or principle with an absolute repo URL so the link works from anywhere (e.g., PR comments, external tools). Each rule's anchor is its heading text, lowercased, punctuation dropped, spaces replaced by hyphens. Example: `[Strictness over sloppiness](https://github.com/thruput-io/handbook/blob/main/PHILOSOPHY.md#strictness-over-sloppiness)`.
-- MUST NOT provide actionable guidance.
+- Explains the violation. Keep it short.
+- MUST cite the violated rule or principle as an absolute repo URL, so the link resolves outside this repo. Anchors are derived as described in [`RULES.md § Priority and precedence`](./RULES.md#priority-and-precedence). Example: `[Strictness over sloppiness](https://github.com/thruput-io/handbook/blob/main/PHILOSOPHY.md#strictness-over-sloppiness)`.
+- States what is wrong, not how to fix it. Do not hand the author a patch.
 
-### 5. Submit as a Single Review
+The ledger stays local. It is the completeness record for the review, not review content.
+
+### 6. Settle Existing Threads
+
+Subsequent reviews only. List threads and their state:
+
+```bash
+gh api graphql -f query='
+  query($owner:String!, $repo:String!, $n:Int!) {
+    repository(owner:$owner, name:$repo) {
+      pullRequest(number:$n) {
+        reviewThreads(first:100) {
+          nodes { id isResolved isOutdated path line comments(first:1){nodes{body}} }
+        }
+      }
+    }
+  }' -F owner={owner} -F repo={repo} -F n={n}
+```
+
+Then, per thread `id`:
+
+- Fixed: `gh api graphql -f query='mutation($t:ID!){ resolveReviewThread(input:{threadId:$t}){ thread{ id } } }' -F t=<id>`
+- Resolved by the author but not actually fixed: `unresolveReviewThread` with the same shape, plus a new comment in step 5.
+
+### 7. Submit as a Single Review
+
+Do not submit until every ledger row is filled. An unfilled row means the review is unfinished, whatever the findings count.
 
 Build a JSON payload:
 
@@ -88,7 +163,7 @@ Build a JSON payload:
   "commit_id": "<headRefOid>",
   "body": "<overall review body>",
   "event": "APPROVE | REQUEST_CHANGES | COMMENT",
-  "comments": [ /* array from step 4 */ ]
+  "comments": [ /* array from step 5 */ ]
 }
 ```
 
