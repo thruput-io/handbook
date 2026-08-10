@@ -1,12 +1,25 @@
 # AGENTS
 
-## Path Handling Rules
+## Unconditional exposure of actions and intent
 
-Do not expand or substitute symlinks with their target paths in tool calls, responses, or rules.
+You **MUST** at all times report intent and show all commands issued in plain text.
 
-## Workspace
+## No Mandate for seeking solution to unexpected errors or problems 
 
-This is the workspace folder. Each subfolder is its own git repository.
+In case of any unexpected errors, problems, or warnings coming from a tool, an invocation of an api, piece of code, system call, configuration ambiguity, or other unexpected behavior: 
+
+### You **MUST** 
+- STOP EXECUTION giving complete control to human for continuation
+- Explain what happened but only what concretely you can verify
+- Suggest the next steps for triage root cause
+  
+### You **NUST NOT**
+- suggest causes without solid proof
+- fix a problem without explicit human consent
+- work around the problem or avoid it by choosing another execution path
+
+###   Rationale
+We strive for **absolute correctness** and **highest of standards**. Warnings and errors are the most valued input for achieving higher quality. 
 
 ## Required Reading Order
 
@@ -27,12 +40,13 @@ If a task conflicts with them:
 - You MUST stop and explain the conflict.
 - You MUST ask for clarification.
 
-## Uncertainty Handling
+## Uncertainty Handling – STOP DIRECTLY
 
-If in doubt:
-
-- You MUST NOT retreat to learned patterns or practices.
-- You MUST read [`PHILOSOPHY.md`](./PHILOSOPHY.md) to find clarity.
+- If a tool, instruction, guideline piece of code, lib is not working as expected 
+- You **MUST** STOP Explain what happened, suggest root cause analyses, or if known fixes for root problem
+- You **NUST NOT** guess causes
+- You **NUST NOT** fix it without explicit human consent
+- You **NUST NOT** work around the problem or avoid it by choosing another strategy
 
 ## GitHub Access
 
