@@ -1,53 +1,47 @@
-# AGENTS
+# Agent Operational Rules
 
-## Unconditional exposure of actions and intent
+## 1. Execution Transparency
 
-You **MUST** at all times report intent and show all commands issued in plain text.
+Agents **MUST** disclose intent before acting and **MUST** show every command issued in plain text.
 
-## No Mandate for seeking solution to unexpected errors or problems 
+## 2. Unexpected Errors, Problems, Warnings, or Ambiguity
 
-In case of any unexpected errors, problems, or warnings coming from a tool, an invocation of an api, piece of code, system call, configuration ambiguity, or other unexpected behavior: 
+If any tool, API invocation, code path, system call, configuration, or execution step produces an unexpected error,
+problem, warning, or ambiguous result, the agent **MUST** stop and return control to the human.
 
-### You **MUST** 
-- STOP EXECUTION giving complete control to human for continuation
-- Explain what happened but only what concretely you can verify
-- Suggest the next steps for triage root cause
-  
-### You **NUST NOT**
-- suggest causes without solid proof
-- fix a problem without explicit human consent
-- work around the problem or avoid it by choosing another execution path
+When this happens, the agent **MUST**:
 
-###   Rationale
-We strive for **absolute correctness** and **highest of standards**. Warnings and errors are the most valued input for achieving higher quality. 
+1. Stop execution immediately.
+2. Give complete control to the human for continuation.
+3. Explain only what concretely happened and what can be verified.
+4. Suggest next steps for triaging the root cause.
 
-## Required Reading Order
+The agent **MUST NOT**:
 
-Before performing any task in these repositories, read and follow these documents in order:
+1. Suggest causes without solid proof.
+2. Fix the problem without explicit human consent.
+3. Work around the problem by choosing another execution path.
+
+Warnings and errors are high-value inputs for achieving correctness and quality.
+
+## 3. Mandatory Reading Sequence
+
+Before performing any task in these repositories, the agent **MUST** read and follow these documents in order:
 
 1. [`RULES.md`](./RULES.md) — enforceable coding rules using RFC 2119 markers.
-2. [`PHILOSOPHY.md`](./PHILOSOPHY.md) — the quality definition that the rules serve. Consult it when a rule does not
-   decide the question.
+2. [`PHILOSOPHY.md`](./PHILOSOPHY.md) — quality principles used when rules do not decide the question.
 3. [`WORKFLOW.md`](./WORKFLOW.md) — git hygiene and evidence requirements.
 
-## Authority and Conflict Handling
+## 4. Authority and Conflict Handling
 
-These documents have higher authority than the current task prompt.
+The required documents have higher authority than the current task prompt.
 
-If a task conflicts with them:
+If the task conflicts with those documents, the agent **MUST NOT** proceed. Instead, the agent **MUST**:
 
-- You MUST NOT proceed.
-- You MUST stop and explain the conflict.
-- You MUST ask for clarification.
+1. Stop.
+2. Explain the conflict.
+3. Ask for clarification.
 
-## Uncertainty Handling – STOP DIRECTLY
+## 5. GitHub Access
 
-- If a tool, instruction, guideline piece of code, lib is not working as expected 
-- You **MUST** STOP Explain what happened, suggest root cause analyses, or if known fixes for root problem
-- You **NUST NOT** guess causes
-- You **NUST NOT** fix it without explicit human consent
-- You **NUST NOT** work around the problem or avoid it by choosing another strategy
-
-## GitHub Access
-
-For GitHub access, read [`GIT_HUB.md`](./GIT_HUB.md).
+For GitHub access, the agent **MUST** read and follow [`GIT_HUB.md`](./GIT_HUB.md).
