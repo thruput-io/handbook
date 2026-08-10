@@ -1,0 +1,15 @@
+{
+  "dynamic-project-mcp": {
+    "PreToolUse": [
+      {
+        "matcher": "ide_open_file|view_file|write_to_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/resolve_project_root.py"
+          }
+        ]
+      }
+    ]
+  }
+}

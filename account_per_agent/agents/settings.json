@@ -1,0 +1,40 @@
+{
+  "gcp": {
+    "project": "vllm-493911",
+    "location": "global"
+  },
+  "toolPermission": "proceed-in-sandbox",
+  "sandbox": {
+    "enabled": true,
+    "allowedPaths": [
+      "/Users/Shared/admin_repo/handbook/**",
+      "/Users/Shared/workspace/**"
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "command(mkdir)",
+      "command(ls)",
+      "command(git)",
+      "mcp(intellij-stream/execute_tool)"
+    ],
+    "deny": [
+      "command(su)",
+      "command(sudo)",
+      "command(git reset --hard)"
+    ],
+    "filesystem": {
+      "read": [
+        "/Users/Shared/admin_repo/handbook/**",
+        "/Users/Shared/workspace/**"
+      ],
+      "execute": [
+        "/Users/Shared/admin_repo/handbook/account_per_agent/**",
+        "/Users/Shared/workspace/**"
+      ],
+      "write": [
+        "/Users/Shared/workspace/**"
+      ]
+    }
+  }
+}
