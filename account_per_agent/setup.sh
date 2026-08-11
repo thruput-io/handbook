@@ -47,6 +47,12 @@ HANDBOOK_DOCS=(
   "GIT_HUB.md"
 )
 
+# Linked as AGENTS.md, so the link name differs from the source name and it
+# cannot live in HANDBOOK_DOCS above. Named here so the permission and ACL
+# passes cover it too.
+AGENTS_DOC_SOURCE="use-rules-AGENTS.md"
+AGENTS_DOC_LINK_NAME="AGENTS.md"
+
 DEVELOPERS_GROUP="${DEVELOPERS_GROUP:-developers}"
 # Privileged group guarding agent homes and secrets: the platform's admin group
 # ("admin" on macOS, "sudo" on Debian). Members read agent secrets without sudo,
@@ -198,6 +204,29 @@ apply_agent_home_permission() {
   sudo chmod 2775 "${target}"
 }
 
+# The links this script drops in ~/.gemini are root-owned, but that alone does
+# not protect them: on POSIX it is write permission on the *containing
+# directory* that governs unlink and rename, not ownership of the entry. An
+# agent owning ~/.gemini can therefore delete a rules link and substitute its
+# own file, detaching itself from the rules it is meant to run under -- without
+# ever needing write access to the config tree.
+#
+# Handing the directory to ADMIN_OWNER and setting the sticky bit closes that
+# without locking the agent out of its own config directory: group write still
+# lets the agent create files here (the CLI keeps session state alongside the
+# links), while +t restricts unlink and rename of an existing entry to that
+# entry's owner. For the links, that is root. Re-runs are unaffected, since
+# link_agent_config removes them as root.
+apply_agent_config_dir_permission() {
+  local description="$1"
+  local target="$2"
+
+  assert_not_symlink "${description}" "${target}"
+
+  sudo chown "${ADMIN_OWNER}:${DEVELOPERS_GROUP}" "${target}"
+  sudo chmod 1775 "${target}"
+}
+
 # Recursive chown that never follows symlinks. GNU chown dereferences by default,
 # so a symlink planted inside an agent-writable tree could otherwise retarget the
 # ownership change at an arbitrary file. -h acts on the link, -P never traverses.
@@ -254,6 +283,50 @@ apply_admin_workspace_permission() {
   chown_tree "${ADMIN_OWNER}:${DEVELOPERS_GROUP}" "${target}"
   sudo find "${target}" -type d -exec chmod 2750 {} +
   sudo find "${target}" -type f -exec chmod 0640 {} +
+}
+
+# Grant DEVELOPERS_GROUP read access that survives mode drift on the link target.
+#
+# The handbook is a git working tree, so `git checkout`/`pull`/`stash` replace a
+# document's inode rather than editing it in place. The replacement takes its
+# mode from the writing process's umask, which silently discards the 0640 set by
+# apply_admin_workspace_permission and can leave every agent's symlink pointing
+# at a file it can no longer open. Mode bits do not inherit, so re-running this
+# script is the only thing that repairs them -- and only until the next checkout.
+#
+# An ACL placed on the *directory* does inherit: the kernel reapplies it to each
+# file created there afterwards, whatever the umask or the writing user. That
+# makes agent readability independent of the mode entirely. The named files are
+# also granted directly, to cover a bare chmod that leaves the inode in place.
+#
+# Both forms are idempotent -- re-adding an existing ACE is a no-op, not a
+# duplicate -- so this is safe on every re-run.
+grant_inherited_group_read() {
+  local dir="$1"
+  shift
+
+  assert_not_symlink "inherited-read-acl" "${dir}"
+
+  local file
+  case "${OS_NAME}" in
+    Darwin)
+      # file_inherit only: every linked document sits at the top level of the
+      # handbook, so there is no reason to propagate into subdirectories (and
+      # every reason not to recurse into .git).
+      sudo chmod +a "group:${DEVELOPERS_GROUP} allow list,search,readattr,readextattr,readsecurity,file_inherit" "${dir}"
+      for file in "$@"; do
+        sudo chmod +a "group:${DEVELOPERS_GROUP} allow read,readattr,readextattr,readsecurity" "${file}"
+      done
+      ;;
+    Linux)
+      # The `d:` entry is the default ACL, applied to newly created files only;
+      # the plain entry covers the directory itself.
+      sudo setfacl -m "d:g:${DEVELOPERS_GROUP}:r-x" -m "g:${DEVELOPERS_GROUP}:r-x" "${dir}"
+      for file in "$@"; do
+        sudo setfacl -m "g:${DEVELOPERS_GROUP}:r--" "${file}"
+      done
+      ;;
+  esac
 }
 
 # Replace a config symlink without ever recursively deleting a real directory.
@@ -323,11 +396,19 @@ apply_scripts_permission "agent-scripts" "${ADMIN_REPO_SCRIPTS_DIR}"
 
 # Link targets must exist before any agent gets a link to them, and they must be
 # group-readable or the link resolves to a file the agent cannot open.
-for DOC in "${HANDBOOK_DOCS[@]}"; do
+LINKED_DOC_PATHS=()
+for DOC in "${HANDBOOK_DOCS[@]}" "${AGENTS_DOC_SOURCE}"; do
   DOC_PATH="${HANDBOOK_DIR}/${DOC}"
   [[ -f "${DOC_PATH}" ]] || fail "Handbook document not found: ${DOC_PATH}"
   apply_admin_workspace_permission "handbook-${DOC}" "${DOC_PATH}"
+  LINKED_DOC_PATHS+=("${DOC_PATH}")
 done
+
+# The chmod above fixes the modes as they are now; this keeps them irrelevant
+# from here on, so a later `git checkout` in the handbook cannot lock agents out
+# of a document they hold a link to.
+grant_inherited_group_read "${HANDBOOK_DIR}" "${LINKED_DOC_PATHS[@]}"
+grant_inherited_group_read "${ADMIN_REPO_CONFIG_DIR}"
 
 for AGENT in "${AGENT_NAMES[@]}"; do
   AGENT_DIR="${BASE_DIR}/${AGENT}"
@@ -352,12 +433,13 @@ for AGENT in "${AGENT_NAMES[@]}"; do
   for DOC in "${HANDBOOK_DOCS[@]}"; do
     link_agent_config "${GEMINI_DIR}/${DOC}" "${HANDBOOK_DIR}/${DOC}"
   done
-    link_agent_config "${GEMINI_DIR}/AGENTS.md" "${HANDBOOK_DIR}/use-rules-AGENTS.md"
+  link_agent_config "${GEMINI_DIR}/${AGENTS_DOC_LINK_NAME}" "${HANDBOOK_DIR}/${AGENTS_DOC_SOURCE}"
 
 
   # Apply outermost-inward so the tighter inner modes are written last and the
   # recursive passes above them cannot undo the modes below.
   apply_agent_home_permission "${AGENT}-home" "${AGENT_DIR}"
+  apply_agent_config_dir_permission "${AGENT}-gemini" "${GEMINI_DIR}"
   apply_workspace_permissions "${AGENT}-workspace" "${WORKSPACE_DIR}"
   apply_secret_permission "${AGENT}-secrets" "${SECRETS_DIR}"
   apply_agent_secret_permission "${AGENT}-created-by-agent-secrets" "${CREATED_BY_AGENT_SECRETS_DIR}"
