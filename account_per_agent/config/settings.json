@@ -11,8 +11,8 @@
       "/Users/*/secrets/**",
       "/Users/Shared/admin_repo/handbook/**",
       "/Users/Shared/workspace/**",
-      "~/.gemini/config/**",
-      "~/secrets/**"
+      "/Users/*/.gemini/config/**",
+      "/Users/*/secrets/**"
     ]
   },
   "permissions": {

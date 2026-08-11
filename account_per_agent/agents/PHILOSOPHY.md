@@ -1,1 +1,0 @@
-/Users/Shared/admin_repo/handbook/PHILOSOPHY.md

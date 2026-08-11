@@ -34,8 +34,18 @@ BASE_DIR="${AGENT_HOME_BASE:-${DEFAULT_HOME_BASE}}"
 # per-user path into every agent's config symlinks, which other accounts cannot
 # follow. Agents need the physical, universally reachable path.
 SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-ADMIN_REPO_AGENTS_DIR="${SCRIPT_DIR}/agents"
-ADMIN_REPO_SCRIPTS_DIR="${ADMIN_REPO_AGENTS_DIR}/scripts"
+HANDBOOK_DIR="$(dirname "${SCRIPT_DIR}")"
+ADMIN_REPO_CONFIG_DIR="${SCRIPT_DIR}/config"
+ADMIN_REPO_SCRIPTS_DIR="${ADMIN_REPO_CONFIG_DIR}/scripts"
+
+# Handbook documents every agent reads. Linked individually into ~/.gemini so an
+# agent sees them at a stable path without gaining the whole handbook tree.
+HANDBOOK_DOCS=(
+  "RULES.md"
+  "PHILOSOPHY.md"
+  "WORKFLOW.md"
+  "GIT_HUB.md"
+)
 
 DEVELOPERS_GROUP="${DEVELOPERS_GROUP:-developers}"
 # Privileged group guarding agent homes and secrets: the platform's admin group
@@ -308,8 +318,16 @@ read -r -a AGENT_NAMES <<<"${AGENTS}"
 
 assert_identities
 
-apply_admin_workspace_permission "agent-config" "${ADMIN_REPO_AGENTS_DIR}"
+apply_admin_workspace_permission "agent-config" "${ADMIN_REPO_CONFIG_DIR}"
 apply_scripts_permission "agent-scripts" "${ADMIN_REPO_SCRIPTS_DIR}"
+
+# Link targets must exist before any agent gets a link to them, and they must be
+# group-readable or the link resolves to a file the agent cannot open.
+for DOC in "${HANDBOOK_DOCS[@]}"; do
+  DOC_PATH="${HANDBOOK_DIR}/${DOC}"
+  [[ -f "${DOC_PATH}" ]] || fail "Handbook document not found: ${DOC_PATH}"
+  apply_admin_workspace_permission "handbook-${DOC}" "${DOC_PATH}"
+done
 
 for AGENT in "${AGENT_NAMES[@]}"; do
   AGENT_DIR="${BASE_DIR}/${AGENT}"
@@ -329,7 +347,13 @@ for AGENT in "${AGENT_NAMES[@]}"; do
     "${CREATED_BY_AGENT_SECRETS_DIR}" \
     "${GEMINI_DIR}"
 
-  link_agent_config "${GEMINI_CONFIG_LINK}" "${ADMIN_REPO_AGENTS_DIR}"
+  link_agent_config "${GEMINI_CONFIG_LINK}" "${ADMIN_REPO_CONFIG_DIR}"
+
+  for DOC in "${HANDBOOK_DOCS[@]}"; do
+    link_agent_config "${GEMINI_DIR}/${DOC}" "${HANDBOOK_DIR}/${DOC}"
+  done
+    link_agent_config "${GEMINI_DIR}/AGENTS.md" "${HANDBOOK_DIR}/use-rules-AGENTS.md"
+
 
   # Apply outermost-inward so the tighter inner modes are written last and the
   # recursive passes above them cannot undo the modes below.
