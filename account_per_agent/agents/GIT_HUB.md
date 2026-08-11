@@ -1,6 +1,6 @@
 # GITHUB ACCESS
 
-1. Use exclusively `~/.gemini/antigravity-cli/bin/get-gh-token.sh` for GitHub access.
+1. Use exclusively `~/.gemini/config/scripts/get-gh-token.sh` for GitHub access.
 
 2. **Required Files.** The script expects exact secret files in `~/secrets/github`:
    - `~/secrets/github/client_id.txt`
@@ -9,7 +9,7 @@
 
 3. **Scope & Token Usage.** 
 
-       export GH_TOKEN="$(~/.gemini/antigravity-cli/bin/get-gh-token.sh)"
+       export GH_TOKEN="$(~/.gemini/config/scripts/get-gh-token.sh)"
 
    - **Installation Token (`ghs_...`):** The script returns a GitHub App Installation Access Token, not a user account token.
    - **User Endpoints Fail:** Endpoints expecting a GitHub user (such as `GET /user` or `gh auth status` / `gh auth login`) fail with `403 Resource not accessible by integration`. Use repository-scoped commands directly (e.g., `gh pr list -R owner/repo`).

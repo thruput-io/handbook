@@ -57,10 +57,6 @@ As commented changes are reviewed, resolve or unresolve the threads directly in 
 
 ### 1. Setup
 
-Check auth (do not prompt unless needed):
-
-    Run `gh auth status`. Ask the user which identity to use if auth is missing, if multiple accounts are listed, or if the only authenticated identity is the PR author.
-
 Fetch PR data:
 
 - Overview: `gh pr view <URL> --json title,body,state,author,headRefName,baseRefName,headRefOid`

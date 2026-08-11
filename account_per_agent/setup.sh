@@ -29,7 +29,11 @@ esac
 # Overridable so the script can run against non-default layouts.
 BASE_DIR="${AGENT_HOME_BASE:-${DEFAULT_HOME_BASE}}"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# -P resolves symlinks in the invocation path. Plain `pwd` reports the logical
+# path, so running this through e.g. ~/shared -> /Users/Shared would bake a
+# per-user path into every agent's config symlinks, which other accounts cannot
+# follow. Agents need the physical, universally reachable path.
+SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ADMIN_REPO_AGENTS_DIR="${SCRIPT_DIR}/agents"
 ADMIN_REPO_SCRIPTS_DIR="${ADMIN_REPO_AGENTS_DIR}/scripts"
 

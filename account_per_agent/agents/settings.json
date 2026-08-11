@@ -7,8 +7,12 @@
   "sandbox": {
     "enabled": true,
     "allowedPaths": [
+      "/Users/*/.gemini/config/**",
+      "/Users/*/secrets/**",
       "/Users/Shared/admin_repo/handbook/**",
-      "/Users/Shared/workspace/**"
+      "/Users/Shared/workspace/**",
+      "~/.gemini/config/**",
+      "~/secrets/**"
     ]
   },
   "permissions": {
@@ -16,19 +20,24 @@
       "command(mkdir)",
       "command(ls)",
       "command(git)",
+      "command(gh)",
       "mcp(intellij-stream/execute_tool)"
     ],
     "deny": [
       "command(su)",
       "command(sudo)",
+      "command(gh)",
       "command(git reset --hard)"
     ],
     "filesystem": {
       "read": [
+        "/Users/*/.gemini/config/**",
+        "/Users/*/secrets/**",
         "/Users/Shared/admin_repo/handbook/**",
         "/Users/Shared/workspace/**"
       ],
       "execute": [
+        "/Users/*/.gemini/config/scripts/**",
         "/Users/Shared/admin_repo/handbook/account_per_agent/**",
         "/Users/Shared/workspace/**"
       ],
