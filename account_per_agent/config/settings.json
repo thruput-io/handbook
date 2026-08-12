@@ -4,8 +4,7 @@
     "location": "global"
   },
   "trustedWorkspaces": [
-    "/Users/Shared/workspace",
-    "/~/workspace"
+    "/Users/Shared/workspace/handbook"
   ],
   "toolPermission": "always-proceed",
   "nonWorkspaceFileAccess": "allow",
