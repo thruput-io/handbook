@@ -47,11 +47,18 @@ HANDBOOK_DOCS=(
   "GIT_HUB.md"
 )
 
-# Linked as AGENTS.md, so the link name differs from the source name and it
-# cannot live in HANDBOOK_DOCS above. Named here so the permission and ACL
-# passes cover it too.
+# Linked as GEMINI.md, the name the CLI loads automatically, so the link name
+# differs from the source name and it cannot live in HANDBOOK_DOCS above. Named
+# here so the permission and ACL passes cover it too.
 AGENTS_DOC_SOURCE="use-rules-AGENTS.md"
-AGENTS_DOC_LINK_NAME="AGENTS.md"
+AGENTS_DOC_LINK_NAME="GEMINI.md"
+
+# Names this script used for the same document in earlier revisions. Removed on
+# every run so a rename here cannot leave the agent reading two copies, one of
+# them stale.
+LEGACY_DOC_LINK_NAMES=(
+  "AGENTS.md"
+)
 
 DEVELOPERS_GROUP="${DEVELOPERS_GROUP:-developers}"
 # Privileged group guarding agent homes and secrets: the platform's admin group
@@ -342,6 +349,126 @@ link_agent_config() {
   sudo ln -sfn "${target}" "${link_path}"
 }
 
+# Build a real ~/.gemini/config tree for one agent: directories are created, and
+# every file is hard-linked back to the one in the admin repo.
+#
+# A symlinked config directory is not traversed by the agent CLI, so the tree has
+# to consist of real directory entries. Only the leaf files are links, and they
+# are symbolic: a symlink resolves by path, so it still points at the right file
+# after `git checkout`, `git pull`, or an editor's atomic save replaces the
+# source. Hard links would not -- they track the inode, and every one of those
+# operations creates a new one, silently leaving the agent on a frozen copy of
+# the old contents. Nothing in git can be configured to write in place.
+#
+# The tradeoff runs the other way for discovery: a symlink is not reported as a
+# regular file by a `readdir`-based scan that filters on `isFile()`. That is why
+# the directories are real -- the CLI has to be able to walk the tree -- while
+# the files, which it opens by path, can be links.
+mirror_config_tree() {
+  local src="$1"
+  local dest="$2"
+  local rel
+
+  # A previous revision made this path a symlink; remove it before it can be
+  # mistaken for a directory to recurse into.
+  if [[ -L "${dest}" ]]; then
+    sudo rm -f "${dest}"
+  fi
+
+  case "${dest}" in
+    "${BASE_DIR}"/*/.gemini/config) : ;;
+    *) fail "Refusing to rebuild unexpected agent config path: ${dest}" ;;
+  esac
+
+  sudo mkdir -p "${dest}"
+
+  # Every leaf this script owns is a symlink, so clearing them all and recreating
+  # them below leaves nothing behind from a file since deleted in the admin repo.
+  #
+  # This is deliberately not an rm -rf of the tree: projects/ holds the agent's
+  # own work and has to survive a re-run, so it is pruned here and its contents
+  # are never touched. The cost is that a directory removed from the admin repo
+  # lingers as an empty directory until someone deletes it by hand -- cheap, next
+  # to discarding an agent's project state on every provisioning run.
+  sudo find "${dest}" -path "${dest}/projects" -prune -o -type l -delete
+
+  # Directories first: a file must never precede its parent. -L classifies by
+  # what a link points at, so a symlink added to the admin repo is recreated here
+  # as a link to the same file rather than as a link to a link.
+  while IFS= read -r rel; do
+    sudo mkdir -p "${dest}/${rel}"
+  done < <(cd "${src}" && find -L . -mindepth 1 -type d | sed 's|^\./||')
+
+  while IFS= read -r rel; do
+    sudo ln -s "${src}/${rel}" "${dest}/${rel}"
+  done < <(cd "${src}" && find -L . -mindepth 1 -type f | sed 's|^\./||')
+}
+
+# The rules are handbook documents, not config-tree files, so they are linked
+# straight from the handbook into the top level of ~/.gemini, where the CLI reads
+# them. The admin repo holds no copy of them and needs none: the handbook is the
+# source.
+#
+# link_agent_config rather than a bare `ln -s`: these sit outside the config tree
+# and so are not cleared by the rebuild sweep, meaning a second run would hit an
+# existing link. It replaces one and refuses to clobber a real file.
+link_agent_rules() {
+  local dest="$1"
+  local doc
+
+  sudo mkdir -p "${dest}"
+
+  for doc in "${HANDBOOK_DOCS[@]}"; do
+    link_agent_config "${dest}/${doc}" "${HANDBOOK_DIR}/${doc}"
+  done
+  link_agent_config "${dest}/${AGENTS_DOC_LINK_NAME}" "${HANDBOOK_DIR}/${AGENTS_DOC_SOURCE}"
+
+  for doc in "${LEGACY_DOC_LINK_NAMES[@]}"; do
+    if [[ -L "${dest}/${doc}" ]]; then
+      sudo rm -f "${dest}/${doc}"
+    fi
+  done
+}
+
+# Only the directories, which is what governs whether an agent can add or remove
+# entries. The leaf files are symlinks and deliberately left alone: chmod and
+# chown follow a symlink to its target, so a recursive pass here would reach out
+# of the agent's tree and rewrite the admin repo and handbook originals --
+# stripping the executable bit from get-gh-token.sh among other things. A
+# symlink's own mode is not consulted for access anyway; the target's is, and
+# that is set where the target lives.
+#
+# projects/ is pruned throughout: it belongs to the agent, and a recursive pass
+# would take their own project directories away from them.
+apply_agent_config_mirror_permission() {
+  local description="$1"
+  local target="$2"
+
+  assert_not_symlink "${description}" "${target}"
+
+  sudo find "${target}" -path "${target}/projects" -prune -o \
+    -type d -exec chown "${ADMIN_OWNER}:${DEVELOPERS_GROUP}" {} +
+  sudo find "${target}" -path "${target}/projects" -prune -o \
+    -type d -exec chmod 2750 {} +
+}
+
+# The one place under config the agent owns outright. Everything else is
+# admin-owned and read-only to them; project state is theirs to write, so the
+# directory is handed over rather than mirrored. Only the directory itself is
+# touched -- whatever the agent has created inside it is already theirs, and a
+# recursive pass would only risk disturbing it.
+apply_agent_projects_permission() {
+  local description="$1"
+  local target="$2"
+
+  assert_not_symlink "${description}" "${target}"
+
+  sudo chown "${AGENT}:${DEVELOPERS_GROUP}" "${target}"
+  # setgid so anything created here stays in the developers group, keeping it
+  # readable to the admin owner without a chown after the fact.
+  sudo chmod 2770 "${target}"
+}
+
 register_on_path() {
   local description="$1"
   local target="$2"
@@ -416,7 +543,10 @@ for AGENT in "${AGENT_NAMES[@]}"; do
   SECRETS_DIR="${AGENT_DIR}/secrets"
   CREATED_BY_AGENT_SECRETS_DIR="${SECRETS_DIR}/created_by_agent"
   GEMINI_DIR="${AGENT_DIR}/.gemini"
-  GEMINI_CONFIG_LINK="${GEMINI_DIR}/config"
+  GEMINI_CONFIG_DIR="${GEMINI_DIR}/config"
+  GEMINI_PROJECTS_DIR="${GEMINI_CONFIG_DIR}/projects"
+  # Left behind by the revision that kept the rules under the config tree.
+  LEGACY_RULES_DIR="${GEMINI_CONFIG_DIR}/rules"
 
   echo "[+] Processing: ${AGENT}"
 
@@ -428,18 +558,24 @@ for AGENT in "${AGENT_NAMES[@]}"; do
     "${CREATED_BY_AGENT_SECRETS_DIR}" \
     "${GEMINI_DIR}"
 
-  link_agent_config "${GEMINI_CONFIG_LINK}" "${ADMIN_REPO_CONFIG_DIR}"
+  mirror_config_tree "${ADMIN_REPO_CONFIG_DIR}" "${GEMINI_CONFIG_DIR}"
+  link_agent_rules "${GEMINI_DIR}"
+  # mkdir -p, never recreated: the rebuild above prunes it, so an existing
+  # projects directory keeps its contents across runs.
+  sudo mkdir -p "${GEMINI_PROJECTS_DIR}"
 
-  for DOC in "${HANDBOOK_DOCS[@]}"; do
-    link_agent_config "${GEMINI_DIR}/${DOC}" "${HANDBOOK_DIR}/${DOC}"
-  done
-  link_agent_config "${GEMINI_DIR}/${AGENTS_DOC_LINK_NAME}" "${HANDBOOK_DIR}/${AGENTS_DOC_SOURCE}"
+  # The rebuild sweep already removed the links this directory held. rmdir, not
+  # rm -r, so it goes only if it is genuinely empty and anything unexpected left
+  # inside is preserved for inspection rather than deleted.
+  sudo rmdir "${LEGACY_RULES_DIR}" 2>/dev/null || true
 
 
   # Apply outermost-inward so the tighter inner modes are written last and the
   # recursive passes above them cannot undo the modes below.
   apply_agent_home_permission "${AGENT}-home" "${AGENT_DIR}"
   apply_agent_config_dir_permission "${AGENT}-gemini" "${GEMINI_DIR}"
+  apply_agent_config_mirror_permission "${AGENT}-gemini-config" "${GEMINI_CONFIG_DIR}"
+  apply_agent_projects_permission "${AGENT}-gemini-projects" "${GEMINI_PROJECTS_DIR}"
   apply_workspace_permissions "${AGENT}-workspace" "${WORKSPACE_DIR}"
   apply_secret_permission "${AGENT}-secrets" "${SECRETS_DIR}"
   apply_agent_secret_permission "${AGENT}-created-by-agent-secrets" "${CREATED_BY_AGENT_SECRETS_DIR}"

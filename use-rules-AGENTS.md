@@ -28,9 +28,11 @@ Warnings and errors are high-value inputs for achieving correctness and quality.
 
 Before performing any task in these repositories, the agent **MUST** read and follow these documents in order:
 
-1. [`RULES.md`](./RULES.md) — enforceable coding rules using RFC 2119 markers.
-2. [`PHILOSOPHY.md`](./PHILOSOPHY.md) — quality principles used when rules do not decide the question.
-3. [`WORKFLOW.md`](./WORKFLOW.md) — git hygiene and evidence requirements.
+Do not follow symlinks into other locations. Read the files where symlinks have purposely been placed for your permissions to allow access  .
+
+1. [`RULES.md`](~/.gemini/RULES.md) — enforceable coding rules using RFC 2119 markers.
+2. [`PHILOSOPHY.md`](~/.gemini/PHILOSOPHY.md) — quality principles used when rules do not decide the question.
+3. [`WORKFLOW.md`](~/.gemini/WORKFLOW.md) — git hygiene and evidence requirements.
 
 ## 4. Authority and Conflict Handling
 
@@ -44,4 +46,4 @@ If the task conflicts with those documents, the agent **MUST NOT** proceed. Inst
 
 ## 5. GitHub Access
 
-For GitHub access, the agent **MUST** read and follow [`GIT_HUB.md`](./GIT_HUB.md).
+For GitHub access, the agent **MUST** read and follow [`GIT_HUB.md`](~/.gemini/GIT_HUB.md).
