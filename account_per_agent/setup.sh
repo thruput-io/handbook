@@ -53,13 +53,6 @@ HANDBOOK_DOCS=(
 AGENTS_DOC_SOURCE="use-rules-AGENTS.md"
 AGENTS_DOC_LINK_NAME="GEMINI.md"
 
-# Names this script used for the same document in earlier revisions. Removed on
-# every run so a rename here cannot leave the agent reading two copies, one of
-# them stale.
-LEGACY_DOC_LINK_NAMES=(
-  "AGENTS.md"
-)
-
 DEVELOPERS_GROUP="${DEVELOPERS_GROUP:-developers}"
 # Privileged group guarding agent homes and secrets: the platform's admin group
 # ("admin" on macOS, "sudo" on Debian). Members read agent secrets without sudo,
@@ -369,8 +362,10 @@ mirror_config_tree() {
   local dest="$2"
   local rel
 
-  # A previous revision made this path a symlink; remove it before it can be
-  # mistaken for a directory to recurse into.
+  # Never build through a symlink. `mkdir -p` on a symlink to a directory
+  # succeeds silently, so without this every link below would be written into
+  # whatever the link points at -- the admin repo itself, if the path is left
+  # over from a symlinked-config layout.
   if [[ -L "${dest}" ]]; then
     sudo rm -f "${dest}"
   fi
@@ -422,12 +417,6 @@ link_agent_rules() {
     link_agent_config "${dest}/${doc}" "${HANDBOOK_DIR}/${doc}"
   done
   link_agent_config "${dest}/${AGENTS_DOC_LINK_NAME}" "${HANDBOOK_DIR}/${AGENTS_DOC_SOURCE}"
-
-  for doc in "${LEGACY_DOC_LINK_NAMES[@]}"; do
-    if [[ -L "${dest}/${doc}" ]]; then
-      sudo rm -f "${dest}/${doc}"
-    fi
-  done
 }
 
 # Only the directories, which is what governs whether an agent can add or remove
@@ -545,8 +534,6 @@ for AGENT in "${AGENT_NAMES[@]}"; do
   GEMINI_DIR="${AGENT_DIR}/.gemini"
   GEMINI_CONFIG_DIR="${GEMINI_DIR}/config"
   GEMINI_PROJECTS_DIR="${GEMINI_CONFIG_DIR}/projects"
-  # Left behind by the revision that kept the rules under the config tree.
-  LEGACY_RULES_DIR="${GEMINI_CONFIG_DIR}/rules"
 
   echo "[+] Processing: ${AGENT}"
 
@@ -563,11 +550,6 @@ for AGENT in "${AGENT_NAMES[@]}"; do
   # mkdir -p, never recreated: the rebuild above prunes it, so an existing
   # projects directory keeps its contents across runs.
   sudo mkdir -p "${GEMINI_PROJECTS_DIR}"
-
-  # The rebuild sweep already removed the links this directory held. rmdir, not
-  # rm -r, so it goes only if it is genuinely empty and anything unexpected left
-  # inside is preserved for inspection rather than deleted.
-  sudo rmdir "${LEGACY_RULES_DIR}" 2>/dev/null || true
 
 
   # Apply outermost-inward so the tighter inner modes are written last and the

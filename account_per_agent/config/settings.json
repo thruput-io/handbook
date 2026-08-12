@@ -3,22 +3,26 @@
     "project": "vllm-493911",
     "location": "global"
   },
-  "toolPermission": "proceed-in-sandbox",
+  "trustedWorkspaces": [
+    "/Users/Shared/workspace",
+    "/~/workspace"
+  ],
+  "toolPermission": "always-proceed",
+  "nonWorkspaceFileAccess": "allow",
   "sandbox": {
-    "enabled": true,
-    "allowedPaths": [
-      "/Users/Shared/admin_repo/handbook/**",
-      "/Users/Shared/workspace/**",
-      "~/.gemini/config/**",
-      "~/secrets/**"
-    ]
+    "enabled": false
   },
   "permissions": {
     "allow": [
+      "mcp(*)",
+      "read_url(*)",
+      "read_file(*)",
       "command(mkdir)",
       "command(ls)",
       "command(git)",
       "command(gh)",
+      "command(get-gh-token.sh)",
+      "command(cat)",
       "mcp(intellij-stream/execute_tool)"
     ],
     "deny": [
@@ -28,18 +32,22 @@
     ],
     "filesystem": {
       "read": [
-        "~/.gemini/**",
-        "~/secrets/**",
         "/Users/Shared/admin_repo/handbook/**",
-        "/Users/Shared/workspace/**"
+        "/Users/Shared/workspace/**",
+        "~/workspace/**",
+        "~/.gemini/**",
+        "~/secrets/**"
       ],
       "execute": [
         "/Users/Shared/admin_repo/handbook/account_per_agent/**",
         "/Users/Shared/workspace/**",
+        "~/workspace/**",
         "~/.gemini/**"
       ],
       "write": [
-        "/Users/Shared/workspace/**"
+        "/Users/Shared/workspace/**",
+        "~/workspace/**",
+        "~/secrets/created_by_agent/**"
       ]
     }
   }
