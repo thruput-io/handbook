@@ -104,6 +104,10 @@ Only the reviewing context talks to the PR host. Subagents read; they never post
 
 Merge the returned rows into a single ledger, and the returned comments into the array built in [step 5](#5-draft-comments-locally). Fanned-out work that returns without ledger rows is not a result — re-run it.
 
+**Wait for every probe before moving on.** The probe list from the enumeration above is the expected row count: the ledger is complete only when it holds one row per dispatched subagent. Waiting is a hard barrier — do not draft comments and do not submit while any probe is still outstanding. A `violation` returned early does not end the pass and does not license an early submission; neither does a run of `clean` verdicts. The only path that submits without a complete ledger is [step 2](#2-pre-review-content-checks).
+
+Submitting while probes are still running does not produce a partial review, it produces a wrong one. It reports a violation count the change set does not have, and it makes the rules whose subagents had not yet returned indistinguishable from rules that came back `clean`.
+
 ### 4. Escalate When the Ledger Comes Back Clean
 
 If the ledger is complete and holds no `violation` rows, the review is not finished — probe further before approving:
@@ -137,7 +141,10 @@ Subsequent reviews only. List the threads and their state, then act per thread �
 
 ### 7. Submit
 
-Do not submit until every ledger row is filled. An unfilled row means the review is unfinished, whatever the findings count.
+Two gates, both checked before anything is posted:
+
+- **The ledger is whole.** It holds one row per probe on the list, and every row is filled. A missing row means a probe never returned and the review is unfinished, whatever the findings count.
+- **Every `violation` row is in the payload.** Each one gets its inline comment, and the review body accounts for all of them. A violation that appears in the ledger but not in what is submitted has been found and then dropped, which is worse than not having probed for it — the author is told the change set is cleaner than the review actually established.
 
 Submit every comment from step 5 together with the verdict, anchored to the head commit. How atomic that can be depends on the host:
 
