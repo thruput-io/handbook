@@ -3,7 +3,12 @@
 Source of truth is the curated agent-rules-books-INDEX.md. This script parses
 it and emits a JSON index with, per ruleset: title, author, focus category,
 when-to-use blurb, review checklist (when present in the selection matrix),
-canonical URL, and local submodule path.
+and canonical URL.
+
+Rulesets are addressed only by URL. A submodule-relative path is deliberately
+not emitted: the index is consumed outside this repository (for example bundled
+into the pr-review skill), where the agent-rules-books submodule is absent, and
+a path that resolves only here reads as available when it is not.
 """
 
 import json
@@ -62,7 +67,6 @@ def parse_curated_index(path: str) -> list[dict]:
                 "review_checklist": None,
                 "tree_url": book.group("tree_url").strip(),
                 "canonical_url": None,
-                "local_path": None,
             }
             entries.append(pending)
             continue
@@ -90,16 +94,6 @@ def parse_curated_index(path: str) -> list[dict]:
 
     return entries
 
-def attach_local_paths(entries: list[dict]) -> None:
-    for entry in entries:
-        candidate = os.path.join(books_dir, entry["id"], f"{entry['id']}.md")
-        if os.path.exists(candidate):
-            entry["local_path"] = os.path.relpath(candidate, script_dir)
-        else:
-            fallback = os.path.join(books_dir, entry["id"])
-            if os.path.isdir(fallback):
-                entry["local_path"] = os.path.relpath(fallback, script_dir)
-
 def warn_missing_submodule_entries(entries: list[dict]) -> list[str]:
     indexed_ids = {e["id"] for e in entries}
     submodule_ids: list[str] = []
@@ -117,7 +111,6 @@ def main() -> int:
         return 1
 
     entries = parse_curated_index(curated_index_path)
-    attach_local_paths(entries)
 
     with open(json_output_path, "w", encoding="utf-8") as f:
         json.dump(entries, f, indent=2)
