@@ -7,7 +7,9 @@ Procedural checklist for reviewing pull requests. Serves the rules in [`RULES.md
 - **Subsection** — a `###`-level heading in [`RULES.md`](./RULES.md) (e.g., `### 1. Domain Modeling, Typing & Primitive obsession`). `### If in doubt` and `### If a task conflicts with these guidelines` govern how an agent behaves, not what the code does; they are not reviewable subsections.
 - **Rule** — a `####`-level heading in [`RULES.md`](./RULES.md).
 - **Principle** — a `####`-level heading in [`PHILOSOPHY.md`](./PHILOSOPHY.md).
-- **Review probe** — a focused attempt to find issues from exactly one rule or one principle.
+- **Review probe** — a focused attempt to find issues from exactly one rule or one principle
+- **git-tool** — the CLI for the host the PR lives on: `gh` for GitHub, or `az` with the `azure-devops` extension for Azure DevOps (`dev.azure.com`). Pick it from the PR URL. Every command and payload this workflow needs is in the matching [`gh-cheat-sheet.md`](./gh-cheat-sheet.md) or [`az-cheat-sheet.md`](./az-cheat-sheet.md), referred to below as `{git-tool}-cheat-sheet.md`.
+- **head commit** — the commit the review is anchored to: `headRefOid` on GitHub, `lastMergeSourceCommit.commitId` on Azure DevOps. Every file read and every inline comment resolves against it.
 
 ## Review Standards
 
@@ -57,27 +59,25 @@ As commented changes are reviewed, resolve or unresolve the threads directly in 
 
 ### 1. Setup
 
-Fetch PR data:
+The git-tool must be available.
 
-- Overview: `gh pr view <URL> --json title,body,state,author,headRefName,baseRefName,headRefOid`
-- Diff: `gh pr diff <URL>`
-- Existing review comments (to avoid duplicates): `gh api repos/{owner}/{repo}/pulls/{n}/comments`
+Fetch the PR overview, the changed files, and the existing review comments — the last so this review does not duplicate a comment already on the PR. On Azure DevOps, filter the system-generated threads out of that comparison; counting them as review comments corrupts the check.
 
-Extract `headRefOid` from the overview response — this is the `commit_id` required for inline comments. Do **not** guess it; do **not** use `HEAD` of the local checkout.
+Extract the head commit from the overview response — inline comments are posted against it. Do **not** guess it; do **not** use `HEAD` of the local checkout.
 
-**Read beyond the diff.** Hunks are not enough to evaluate most of [`RULES.md`](./RULES.md) — dead code, layering, primitive leakage, missing tests, and unrepresentable illegal states are all invisible in isolated hunks. Before probing, obtain at `headRefOid`:
+**Read beyond the diff.** Hunks are not enough to evaluate most of [`RULES.md`](./RULES.md) — dead code, layering, primitive leakage, missing tests, and unrepresentable illegal states are all invisible in isolated hunks. Before probing, obtain at the head commit:
 
 - Every changed file, in full.
 - The call sites of every changed public symbol.
 - The test files covering every changed file, including the case where none exist.
 
-Either `gh pr checkout <URL>` and read locally, or fetch per file with `gh api repos/{owner}/{repo}/contents/{path}?ref=<headRefOid>`.
+Either check the PR out and read locally, or fetch per file — see `{git-tool}-cheat-sheet.md § Read files at the head commit`. Azure DevOps returns no textual diff at all, so there the full-file read is the only option.
 
 A probe that could not obtain the context it needed is recorded with that fact in `examined` — never silently downgraded to `clean`.
 
 ### 2. Pre-Review Content Checks
 
-If any of the following is true, stop probing and submit a `REQUEST_CHANGES` review whose body names the failing check, with no inline comments:
+If any of the following is true, stop probing and submit a changes-requested verdict whose body names the failing check, with no inline comments — `REQUEST_CHANGES` on GitHub, a `wait-for-author` or `reject` vote on Azure DevOps:
 
 - Tests are failing.
 - The PR has merge conflicts.
@@ -96,27 +96,29 @@ These are independent and MUST be fanned out concurrently:
 
 Both evaluations run to completion regardless of what the other finds. Finding a violation early does not end the pass; neither does finding none.
 
-Merge the results into a single ledger. Fanned-out work that returns without ledger rows is not a result — re-run it.
+**Fan out one subagent per probe.** Each probe MUST run in its own subagent, dispatched with [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md) filled in. Do not probe several rules in one subagent, and do not probe rules in the reviewing context itself. The library search is one further subagent.
+
+Enumerate every rule (`####` in [`RULES.md`](./RULES.md)) and every principle (`####` in [`PHILOSOPHY.md`](./PHILOSOPHY.md)) first; that enumeration is the probe list, and its length is the number of subagents to dispatch. Launch them concurrently.
+
+Only the reviewing context talks to the PR host. Subagents read; they never post, resolve threads, or submit.
+
+Merge the returned rows into a single ledger, and the returned comments into the array built in [step 5](#5-draft-comments-locally). Fanned-out work that returns without ledger rows is not a result — re-run it.
 
 ### 4. Escalate When the Ledger Comes Back Clean
 
 If the ledger is complete and holds no `violation` rows, the review is not finished — probe further before approving:
 
-1. Consult [`references/agent-rules-books-INDEX.md`](./references/agent-rules-books-INDEX.md) and select the ruleset most relevant to what this PR changes.
-2. Probe against that ruleset, adding rows to the same ledger.
+1. Consult [`references/agent-rules-books-INDEX.md`](https://github.com/thruput-io/handbook/blob/main/references/agent-rules-books-INDEX.md) — or the copy bundled with the tooling that invoked this review — and select the ruleset whose focus matches what this PR changes.
+2. The index is a pointer, not a ruleset. Fetch the selected ruleset at its `canonical_url` in [`ciembor/agent-rules-books`](https://github.com/ciembor/agent-rules-books) and read the actual rules. Do not probe from the index's one-line summary, or from memory of the book.
+3. Probe that ruleset the same way as [step 3](#3-library-search-and-rule-evaluation-run-in-parallel): one subagent per rule, [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md) filled in with the ruleset URL as `{{RULE_SOURCE_URL}}`. Add the returned rows to the same ledger.
 
 Approve only after this pass also comes back clean.
 
 ### 5. Draft Comments Locally
 
-Build a JSON array of comments in memory (do not post yet), one object per `violation` row, with these fields — and no others, as the API rejects unknown keys:
+Build the comments in memory (do not post yet), one per `violation` row. The payload shape is host-specific — a comment object on GitHub, a thread with a `threadContext` on Azure DevOps; both are in `{git-tool}-cheat-sheet.md`.
 
-- `path` — repo-relative file path (e.g. `src/foo.ts`).
-- `line` — line number in the file **as of the PR head commit**, not the diff hunk offset. Emit as a bare integer (no quotes).
-- `side` — `RIGHT` for lines added/modified in the PR, `LEFT` for removed lines. Default `RIGHT`.
-- `body` — the comment body, including the rule citation.
-
-For multi-line comments add `start_line` and `start_side`.
+Two properties carry review meaning rather than syntax, and are decided here whatever the host: the line is the line **as of the head commit**, never a diff hunk offset; and a comment anchors to the removed-line side only when the violation is in a removed line.
 
 Each comment body:
 
@@ -128,45 +130,16 @@ The ledger stays local. It is the completeness record for the review, not review
 
 ### 6. Settle Existing Threads
 
-Subsequent reviews only. List threads and their state:
+Subsequent reviews only. List the threads and their state, then act per thread — commands in `{git-tool}-cheat-sheet.md`:
 
-```bash
-gh api graphql -f query='
-  query($owner:String!, $repo:String!, $n:Int!) {
-    repository(owner:$owner, name:$repo) {
-      pullRequest(number:$n) {
-        reviewThreads(first:100) {
-          nodes { id isResolved isOutdated path line comments(first:1){nodes{body}} }
-        }
-      }
-    }
-  }' -F owner={owner} -F repo={repo} -F n={n}
-```
+- Fixed: resolve the thread.
+- Resolved by the author but not actually fixed: unresolve it, and add a new comment in step 5.
 
-Then, per thread `id`:
-
-- Fixed: `gh api graphql -f query='mutation($t:ID!){ resolveReviewThread(input:{threadId:$t}){ thread{ id } } }' -F t=<id>`
-- Resolved by the author but not actually fixed: `unresolveReviewThread` with the same shape, plus a new comment in step 5.
-
-### 7. Submit as a Single Review
+### 7. Submit
 
 Do not submit until every ledger row is filled. An unfilled row means the review is unfinished, whatever the findings count.
 
-Build a JSON payload:
+Submit every comment from step 5 together with the verdict, anchored to the head commit. How atomic that can be depends on the host:
 
-```json
-{
-  "commit_id": "<headRefOid>",
-  "body": "<overall review body>",
-  "event": "APPROVE | REQUEST_CHANGES | COMMENT",
-  "comments": [ /* array from step 5 */ ]
-}
-```
-
-Submit atomically:
-
-```bash
-gh api -X POST repos/{owner}/{repo}/pulls/{n}/reviews --input review.json
-```
-
-This produces one review, one notification, and all comments are grouped. Do **not** use `POST /pulls/{n}/comments` in a loop — that creates N standalone review comments, N notifications, and is not atomic.
+- **GitHub** — one payload carries every inline comment plus the verdict, so submit exactly **one** review: one review, one notification, comments grouped. Do **not** post comments one at a time in a loop — that is N standalone comments, N notifications, and not atomic. See [`gh-cheat-sheet.md § Submit one atomic review`](./gh-cheat-sheet.md#submit-one-atomic-review).
+- **Azure DevOps** — no atomic endpoint exists. Each thread is its own request and the vote is a separate call, so N comments unavoidably mean N requests. Drafting locally in step 5 is what replaces atomicity: post every thread **before** casting the vote, so the verdict never lands ahead of its evidence, and on a retry reconcile against the existing threads rather than duplicating them. See [`az-cheat-sheet.md § No atomic review`](./az-cheat-sheet.md#no-atomic-review).
