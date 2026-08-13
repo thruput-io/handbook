@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "intellij-stream": {
+      "type": "streamable-http",
+      "url": "http://127.0.0.1:64342/stream",
+      "description": "IntelliJ Companion MCP server providing IDE tools (ide_open_file, ide_get_active_editor, etc.). Requires setting environment variable:IJ_MCP_SERVER_PROJECT_PATH=$(pwd) to the target project root directory.",
+      "headers": {
+        "IJ_MCP_SERVER_PROJECT_PATH": "${IJ_MCP_SERVER_PROJECT_PATH}",
+        "X-IDE-User": "${USER}",
+        "X-IDE-Home": "${HOME}"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "*"
+      ]
+    }
+  }
+}
+
+
