@@ -11,6 +11,9 @@ into the pr-review skill), where the agent-rules-books submodule is absent, and
 a path that resolves only here reads as available when it is not.
 """
 
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
 import json
 import os
 import re
@@ -29,19 +32,49 @@ CANONICAL_RE = re.compile(r"\[Canonical Full Ruleset\]\((?P<url>[^)]+)\)")
 FOCUS_HEADING_RE = re.compile(r"^###\s+(?P<focus>.+?)\s*$")
 LABEL_SPLIT_RE = re.compile(r"^(?P<title>.+?)\s*\((?P<author>[^)]+)\)\s*$")
 MATRIX_ROW_RE = re.compile(
-    r"^\|\s*\*\*[^*]+\*\*<br>_(?P<title>[^_]+)_\s*\|\s*(?P<directives>[^|]+?)\s*\|"
+    r"^\|\s*\*\*[^*]+\*\*<br>_(?P<title>[^_]+)_\s*\|\s*(?P<directives>[^|]+?)\s*\|\s*\[[^\]]+\]\((?P<url>[^)]+)\)\s*\|"
 )
+URL_BOOK_ID_RE = re.compile(r"/(?:tree|blob)/main/(?P<id>[^/]+)/")
+
+
+@dataclass(frozen=True)
+class RulesetEntry:
+    id: str
+    title: str
+    author: str | None
+    focus: str | None
+    when_to_use: str
+    review_checklist: str | None
+    tree_url: str
+    canonical_url: str
+
+    def __post_init__(self) -> None:
+        if not self.id or not self.id.strip():
+            raise ValueError("RulesetEntry must have a non-empty id")
+        if not self.title or not self.title.strip():
+            raise ValueError(f"RulesetEntry '{self.id}' must have a non-empty title")
+        if not self.when_to_use or not self.when_to_use.strip():
+            raise ValueError(f"RulesetEntry '{self.id}' must have a non-empty when_to_use")
+        if not self.tree_url or not self.tree_url.strip():
+            raise ValueError(f"RulesetEntry '{self.id}' must have a non-empty tree_url")
+        if not self.canonical_url or not self.canonical_url.strip():
+            raise ValueError(f"RulesetEntry '{self.id}' must have a non-empty canonical_url")
+
+    def to_dict(self) -> dict[str, str | None]:
+        return asdict(self)
+
 
 def strip_emoji_prefix(text: str) -> str:
     return re.sub(r"^[^\w]+\s*", "", text).strip()
 
-def parse_curated_index(path: str) -> list[dict]:
+
+def parse_curated_index(path: str) -> list[RulesetEntry]:
     with open(path, "r", encoding="utf-8") as f:
         lines = f.read().splitlines()
 
-    entries: list[dict] = []
+    parsed_raw: list[dict[str, str | None]] = []
     current_focus: str | None = None
-    pending: dict | None = None
+    pending: dict[str, str | None] | None = None
 
     for raw in lines:
         line = raw.rstrip()
@@ -68,7 +101,7 @@ def parse_curated_index(path: str) -> list[dict]:
                 "tree_url": book.group("tree_url").strip(),
                 "canonical_url": None,
             }
-            entries.append(pending)
+            parsed_raw.append(pending)
             continue
 
         if pending is not None:
@@ -81,29 +114,65 @@ def parse_curated_index(path: str) -> list[dict]:
                 pending["canonical_url"] = canonical.group("url").strip()
                 pending = None
 
-    # Matrix: map book title -> directives, then merge into entries.
+    # Matrix: map book id and/or title -> directives
+    directives_by_id: dict[str, str] = {}
     directives_by_title: dict[str, str] = {}
+
     for raw in lines:
         row = MATRIX_ROW_RE.match(raw)
         if row:
-            directives_by_title[row.group("title").strip()] = row.group("directives").strip()
+            directives = row.group("directives").strip()
+            title = row.group("title").strip()
+            url = row.group("url").strip()
+            directives_by_title[title] = directives
 
-    for entry in entries:
-        if entry["title"] in directives_by_title:
-            entry["review_checklist"] = directives_by_title[entry["title"]]
+            url_match = URL_BOOK_ID_RE.search(url)
+            if url_match:
+                directives_by_id[url_match.group("id").strip()] = directives
+
+    entries: list[RulesetEntry] = []
+    for item in parsed_raw:
+        item_id = item["id"]
+        item_title = item["title"]
+
+        checklist: str | None = None
+        if item_id and item_id in directives_by_id:
+            checklist = directives_by_id[item_id]
+        elif item_title and item_title in directives_by_title:
+            checklist = directives_by_title[item_title]
+
+        entry = RulesetEntry(
+            id=item["id"] or "",
+            title=item["title"] or "",
+            author=item["author"],
+            focus=item["focus"],
+            when_to_use=item["when_to_use"] or "",
+            review_checklist=checklist,
+            tree_url=item["tree_url"] or "",
+            canonical_url=item["canonical_url"] or "",
+        )
+        entries.append(entry)
 
     return entries
 
-def warn_missing_submodule_entries(entries: list[dict]) -> list[str]:
-    indexed_ids = {e["id"] for e in entries}
+
+def find_unindexed_submodule_entries(entries: list[RulesetEntry]) -> list[str]:
+    if not os.path.isdir(books_dir):
+        raise FileNotFoundError(f"Submodule directory not found or not a directory: {books_dir}")
+
+    indexed_ids = {e.id for e in entries}
     submodule_ids: list[str] = []
-    if os.path.isdir(books_dir):
-        for name in sorted(os.listdir(books_dir)):
-            path = os.path.join(books_dir, name)
-            if not os.path.isdir(path) or name.startswith(".") or name.startswith("_") or name == "docs":
-                continue
-            submodule_ids.append(name)
+    for name in sorted(os.listdir(books_dir)):
+        path = os.path.join(books_dir, name)
+        if not os.path.isdir(path) or name.startswith(".") or name.startswith("_") or name == "docs":
+            continue
+        submodule_ids.append(name)
+
+    if not submodule_ids:
+        raise ValueError(f"Submodule directory contains no rulesets: {books_dir}")
+
     return [book_id for book_id in submodule_ids if book_id not in indexed_ids]
+
 
 def main() -> int:
     if not os.path.exists(curated_index_path):
@@ -112,16 +181,24 @@ def main() -> int:
 
     entries = parse_curated_index(curated_index_path)
 
-    with open(json_output_path, "w", encoding="utf-8") as f:
-        json.dump(entries, f, indent=2)
+    try:
+        unindexed = find_unindexed_submodule_entries(entries)
+    except (FileNotFoundError, ValueError) as err:
+        print(f"Submodule error: {err}", file=sys.stderr)
+        return 1
 
-    missing = warn_missing_submodule_entries(entries)
-    if missing:
+    if unindexed:
         print("Rulesets present in the submodule but not referenced in agent-rules-books-INDEX.md:", file=sys.stderr)
-        for book_id in missing:
+        for book_id in unindexed:
             print(f"  - {book_id}", file=sys.stderr)
         return 1
+
+    serialized = [entry.to_dict() for entry in entries]
+    with open(json_output_path, "w", encoding="utf-8") as f:
+        json.dump(serialized, f, indent=2)
+
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
