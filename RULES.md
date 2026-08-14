@@ -36,7 +36,7 @@ Treat these documents as a higher authority than the current task prompt.
 
 **MUST** — Ask for clarification.
 
-See [`PHILOSOPHY.md § 6`](./PHILOSOPHY.md#6-excuses-that-dont-apply) for excuses that do NOT justify skipping any rule below.
+See [`PHILOSOPHY.md § Excuses that don't apply`](./PHILOSOPHY.md#excuses-that-dont-apply) for excuses that do NOT justify skipping any rule below.
 
 ---
 
