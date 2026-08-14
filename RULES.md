@@ -120,6 +120,10 @@ See [`PHILOSOPHY.md § 6`](./PHILOSOPHY.md#6-excuses-that-dont-apply) for excuse
 
 **PREFER** — No code over maybe-necessary code.
 
+#### No speculative portability
+
+**MUST NOT** — Add platform, shell, or environment compatibility branches for environments the task does not run in.
+
 ---
 
 ## B. Behavior
@@ -150,6 +154,22 @@ See [`PHILOSOPHY.md § 6`](./PHILOSOPHY.md#6-excuses-that-dont-apply) for excuse
 
 **PREFER** — Fail fast over trying another strategy.
 
+#### No suppressed exit status
+
+**MUST NOT** — Discard a command's non-zero exit status with `|| true`, `|| :`, or an equivalent, when its failure matters.
+
+#### No discarded diagnostics
+
+**MUST NOT** — Send a command's stderr to `/dev/null` when its failure matters; an absence check, where 'not found' is the answer rather than a failure, is exempt.
+
+#### Scripts abort on error
+
+**MUST** — Set `set -euo pipefail`, or the language's equivalent, in every script, and let a failing step abort it.
+
+#### No degraded continuation
+
+**MUST NOT** — Proceed with stale, partial, or assumed input after the step that produces it failed; report and stop.
+
 ---
 
 ## C. Verification
@@ -172,9 +192,13 @@ See [`PHILOSOPHY.md § 6`](./PHILOSOPHY.md#6-excuses-that-dont-apply) for excuse
 
 **MUST** — Add tests for new code.
 
+#### Add tests for updated code
+
+**MUST** — Add tests for updated code.
+
 #### Troubleshooting unit test
 
-**MUST** — Add a unit test for any exploratory troubleshooting, even without a natural home.
+**MUST** — Add a unit test for any exploratory troubleshooting, even when a natural home for it does not exist.
 
 #### Alert on broken tooling
 
