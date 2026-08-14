@@ -50,11 +50,17 @@ Default to:
 
 **MUST NOT** — Lower quality to enable new features.
 
-### 3. How quality is measured
+### 3. The vocabulary of quality
 
-#### Measurement attributes
+#### The attributes
 
-**MUST** — Measure quality by the following attributes:
+These are the terms to use when arguing about quality: they name the axes a change can be good or
+bad along, so a review can say *which* kind of worse something is. They are descriptive, not
+enforceable — citing an attribute characterizes a problem, it does not settle it. The requirement
+being violated **MUST** come from [`RULES.md`](./RULES.md); if no rule decides the question, the
+meta-defaults in [When uncertain](#1-when-uncertain) do.
+
+The attributes:
 
 - [Correctness](#correctness)
 - [Maintainability](#maintainability)
@@ -73,35 +79,35 @@ The software does what our users want it to do.
 
 #### Maintainability
 
-The code can be maintained over time.
+Changing one behaviour requires understanding and touching only the code that owns it.
 
 #### Readability
 
-The code is readable.
+A reader unfamiliar with the code can say what it does, and why, without asking its author.
 
 #### Testability
 
-The code is testable.
+Behaviour can be exercised in isolation, without standing up the network, the clock, or global state.
 
 #### Simplicity
 
-The code is simple.
+The design carries no structure that a present requirement does not demand.
 
 #### True test coverage
 
-'True' test coverage.
+Tests that fail when the behaviour breaks — as opposed to tests that merely execute the lines.
 
 #### Ease of doing the right thing
 
-Ease of doing the right thing.
+The correct approach is also the path of least resistance for the next contributor.
 
 #### Guardrails against doing the wrong thing
 
-Guardrails against doing the wrong thing.
+Types, tests, and tooling make the wrong approach fail early, rather than merely discouraging it.
 
 #### Automation
 
-Level of automation in development, testing, and deployment.
+The steps between a change and its verified deployment that run without a human.
 
 #### Currency of tools and libraries
 
@@ -175,7 +181,15 @@ These principles apply even when it feels like they shouldn't. The following rat
 
 #### Usually needed safeguards
 
-"Since these safeguards are usually needed, I will add them."
+"These safeguards are usually needed, so I will add them here too."
+
+The fallacy is generalizing a habit onto a case that has not been shown to need it. Concretely:
+appending `|| true` or `2>/dev/null` to a command whose failure matters; catching an exception only
+to log it and continue; branching on the platform when the task fixes the platform; substituting a
+default when an input is missing instead of stopping. Each one converts a loud, diagnosable failure
+into a silent wrong answer, which is the opposite of
+[Fail fast over fallbacks](#fail-fast-over-fallbacks). Add a safeguard when *this* path is shown to
+need it, and say what showed it.
 
 #### Standard over strict
 
