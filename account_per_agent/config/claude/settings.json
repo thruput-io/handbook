@@ -26,12 +26,15 @@
       "Bash(sudo *)",
       "Bash(su *)",
       "Bash(git reset --hard *)",
+      "Read(~/anthropic-api-key/**)",
+      "Edit(~/anthropic-api-key/**)",
       "Edit(//Users/Shared/admin_repo/**)",
       "Edit(~/.claude/**)",
       "Edit(~/.gemini/**)"
     ]
   },
   "enableAllProjectMcpServers": true,
+  "apiKeyHelper": "/Users/Shared/admin_repo/handbook/account_per_agent/config/scripts/get-anthropic-key.sh",
   "env": {
     "DISABLE_AUTOUPDATER": "1"
   }

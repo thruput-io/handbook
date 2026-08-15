@@ -39,7 +39,26 @@ BASE_DIR="${AGENT_HOME_BASE:-${DEFAULT_HOME_BASE}}"
 SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 HANDBOOK_DIR="$(dirname "${SCRIPT_DIR}")"
 CLAUDE_CONFIG_DIR="${SCRIPT_DIR}/config/claude"
-CLAUDE_SKILLS_DIR="${CLAUDE_CONFIG_DIR}/skills"
+
+# Skills live at the top of the admin repo rather than under the Claude config
+# tree: they are shared material maintained on their own, not settings for one
+# CLI, so both fleets can draw on the same directory instead of drifting into
+# two copies.
+ADMIN_REPO_DIR="$(dirname "${HANDBOOK_DIR}")"
+CLAUDE_SKILLS_DIR="${CLAUDE_SKILLS_SOURCE:-${ADMIN_REPO_DIR}/skills/skills}"
+
+# Only the skills every agent should have, named one by one rather than taken
+# by mirroring the source directory. The source holds skills meant for
+# particular pieces of work; handing all of them to every account would be a
+# silent decision that grows each time someone adds a skill. Adding one here is
+# a reviewable change.
+COMMON_SKILLS=(
+  "intellij-mcp"
+)
+
+# Per-account grants (planning, pr-review, and so on) are linked in by hand
+# and are not listed here. provision_agent_skills only ever rebuilds the
+# subtrees named above, so those hand-made links survive a re-run.
 CLAUDE_MCP_FILE="${CLAUDE_CONFIG_DIR}/mcp.json"
 
 # MCP is provisioned at project scope -- a .mcp.json at the root of each
@@ -263,10 +282,45 @@ link_agent_config() {
 # by path, so those can be links, and symbolic rather than hard: a symlink
 # resolves by path and so survives git checkout/pull replacing the source
 # inode, which a hard link would not.
-mirror_skills_tree() {
+mirror_one_skill() {
   local src="$1"
   local dest="$2"
+
+  # Enumerated up front so a failure aborts the run. A `while read` fed by a
+  # process substitution cannot do that: set -e does not see a failure inside
+  # <(...), so an unreadable source tree would provision an empty skills
+  # directory and report success. pipefail carries a find failure through sed.
+  local dir_list file_list
+  dir_list="$(cd "${src}" && find -L . -mindepth 1 -type d | sed 's|^\./||')" \
+    || fail "Cannot enumerate skill directories under ${src}"
+  file_list="$(cd "${src}" && find -L . -mindepth 1 -type f | sed 's|^\./||')" \
+    || fail "Cannot enumerate skill files under ${src}"
+
+  sudo mkdir -p "${dest}"
+
+  # Directories first -- a file must never precede its parent. -L classifies by
+  # what a link points at, so a symlink upstream is recreated as a link to the
+  # same file rather than a link to a link.
   local rel
+  while read -r rel; do
+    [[ -n "${rel}" ]] || continue
+    sudo mkdir -p "${dest}/${rel}"
+  done <<<"${dir_list}"
+
+  # -f so a re-run replaces the link in place. Without it the second run fails
+  # on the first existing link, and the only alternative -- clearing the tree
+  # first -- is exactly the destructive sweep this script must not do.
+  while read -r rel; do
+    [[ -n "${rel}" ]] || continue
+    sudo ln -sfn "${src}/${rel}" "${dest}/${rel}"
+  done <<<"${file_list}"
+}
+
+# Build the skills every agent gets. Per-account grants are made by hand and
+# are deliberately not modelled here.
+provision_agent_skills() {
+  local dest="$1"
+  local skill
 
   # mkdir -p on a symlink to a directory succeeds silently, which would write
   # every link below into whatever it points at -- the admin repo itself.
@@ -279,35 +333,19 @@ mirror_skills_tree() {
 
   sudo mkdir -p "${dest}"
 
-  # Every leaf here is a symlink this script owns, so clearing them all and
-  # recreating them leaves nothing behind from a skill since deleted upstream.
-  # Not an rm -rf: a directory removed upstream lingers as an empty directory
-  # until someone deletes it by hand, which is the cheaper failure.
-  sudo find "${dest}" -type l -delete
-
-  # Enumerated up front so a failure aborts the run. A `while read` fed by a
-  # process substitution cannot do that: set -e does not see a failure inside
-  # <(...), so an unreadable source tree would provision an empty skills
-  # directory and report success. pipefail carries a find failure through sed.
-  local dir_list file_list
-  dir_list="$(cd "${src}" && find -L . -mindepth 1 -type d | sed 's|^\./||')" \
-    || fail "Cannot enumerate skill directories under ${src}"
-  file_list="$(cd "${src}" && find -L . -mindepth 1 -type f | sed 's|^\./||')" \
-    || fail "Cannot enumerate skill files under ${src}"
-
-  # Directories first -- a file must never precede its parent. -L classifies by
-  # what a link points at, so a symlink upstream is recreated as a link to the
-  # same file rather than a link to a link.
-  local rel
-  while read -r rel; do
-    [[ -n "${rel}" ]] || continue
-    sudo mkdir -p "${dest}/${rel}"
-  done <<<"${dir_list}"
-
-  while read -r rel; do
-    [[ -n "${rel}" ]] || continue
-    sudo ln -s "${src}/${rel}" "${dest}/${rel}"
-  done <<<"${file_list}"
+  # This script only ever adds links. It deletes nothing under ${dest}, not
+  # even within a subtree it owns: per-account grants are linked in by hand and
+  # live in this same directory, and any sweep here risks revoking them
+  # silently while still reporting success. Removing a skill is done by hand,
+  # deliberately, by whoever decided to remove it.
+  #
+  # Re-running is safe because the links are replaced in place rather than
+  # cleared first -- see the -f in mirror_one_skill.
+  for skill in "${COMMON_SKILLS[@]}"; do
+    [[ -d "${CLAUDE_SKILLS_DIR}/${skill}" ]] \
+      || fail "Common skill '${skill}' does not exist at ${CLAUDE_SKILLS_DIR}/${skill}"
+    mirror_one_skill "${CLAUDE_SKILLS_DIR}/${skill}" "${dest}/${skill}"
+  done
 }
 
 echo "=== Provisioning Claude Code for agents ==="
@@ -322,7 +360,12 @@ assert_identities
 [[ -d "${CLAUDE_CONFIG_DIR}" ]] || fail "Claude config directory not found: ${CLAUDE_CONFIG_DIR}"
 [[ -f "${CLAUDE_CONFIG_DIR}/settings.json" ]] || fail "Missing ${CLAUDE_CONFIG_DIR}/settings.json"
 [[ -f "${CLAUDE_MCP_FILE}" ]] || fail "Missing ${CLAUDE_MCP_FILE}"
-sudo mkdir -p "${CLAUDE_SKILLS_DIR}"
+
+# Never created here. The skills directory is maintained content, so an
+# absent one means the source is wrong or the repo is not checked out --
+# creating it would provision every agent an empty skills tree and call it
+# success.
+[[ -d "${CLAUDE_SKILLS_DIR}" ]] || fail "Skills source not found: ${CLAUDE_SKILLS_DIR}"
 
 apply_admin_config_permission "claude-config" "${CLAUDE_CONFIG_DIR}"
 
@@ -338,6 +381,12 @@ done
 grant_inherited_group_read "${HANDBOOK_DIR}" "${LINKED_DOC_PATHS[@]}"
 grant_inherited_group_read "${CLAUDE_CONFIG_DIR}"
 
+# The skills tree is a git working tree too, so the same inode-replacement
+# problem applies: a checkout drops each file's mode back to the writer's
+# umask and can leave every agent's link pointing at a file it cannot open.
+# The inheriting ACL survives that; the modes do not.
+grant_inherited_group_read "${CLAUDE_SKILLS_DIR}"
+
 # The shared workspace is one directory for the whole fleet, so its .mcp.json
 # is linked once rather than per agent.
 if [[ -d "${SHARED_WORKSPACE}" ]]; then
@@ -352,6 +401,7 @@ for AGENT in "${AGENT_NAMES[@]}"; do
   CLAUDE_DIR="${AGENT_DIR}/.claude"
   AGENT_SKILLS_DIR="${CLAUDE_DIR}/skills"
   AGENT_WORKSPACE="${AGENT_DIR}/workspace"
+  AGENT_SECRET_DIR="${AGENT_DIR}/anthropic-api-key"
 
   echo "[+] Processing: ${AGENT}"
 
@@ -375,7 +425,37 @@ for AGENT in "${AGENT_NAMES[@]}"; do
   sudo -u "${AGENT}" mkdir -p "${AGENT_WORKSPACE}"
   link_agent_config "${AGENT_WORKSPACE}/.mcp.json" "${CLAUDE_MCP_FILE}"
 
-  mirror_skills_tree "${CLAUDE_SKILLS_DIR}" "${AGENT_SKILLS_DIR}"
+  # Claude Code authenticates from a key on disk rather than a /login
+  # credential, because /login stores in the macOS Keychain and an agent
+  # account has no unlocked login keychain under `sudo -i -u`. The directory
+  # and its modes are created here; the key itself is provisioned out of band
+  # and deliberately never written by this script.
+  #
+  # ~/anthropic-api-key rather than ~/secrets/anthropic. ~/secrets is the agent
+  # process's own working store -- it reads GitHub credentials from there during
+  # normal work -- so anything placed in it sits inside the surface the agent
+  # browses. This key authenticates the runtime and is never an input to the
+  # agent's work, so it lives outside that surface. That separation is what lets
+  # settings.json deny reads of the key without also cutting the agent off from
+  # the secrets it is meant to use.
+  #
+  # 0500 on the directory: the account may read and traverse it but cannot add,
+  # replace, or delete anything without root -- on POSIX it is write permission
+  # on the *directory*, not the file, that governs unlink, so 0400 on the key
+  # alone would still leave it replaceable.
+  sudo mkdir -p "${AGENT_SECRET_DIR}"
+  sudo chown -RhP "${AGENT}:${ADMINS_GROUP}" "${AGENT_SECRET_DIR}"
+  sudo find "${AGENT_SECRET_DIR}" -type d -exec chmod 0500 {} +
+  # 0400: only the owning account reads its own API key. The admin group is
+  # deliberately excluded -- nothing administrative needs to read a key back,
+  # and a key exactly one account can read is a key whose leak has one suspect.
+  sudo find "${AGENT_SECRET_DIR}" -type f -exec chmod 0400 {} +
+
+  if ! sudo test -s "${AGENT_SECRET_DIR}/api_key.txt"; then
+    MISSING_KEYS="${MISSING_KEYS:+${MISSING_KEYS} }${AGENT}"
+  fi
+
+  provision_agent_skills "${AGENT_SKILLS_DIR}"
 
   # Outermost first, so the tighter inner modes are written last and the
   # recursive pass above them cannot undo the modes below.
@@ -386,7 +466,20 @@ for AGENT in "${AGENT_NAMES[@]}"; do
 done
 
 echo "=== All agents processed ==="
-echo
-echo "Each agent must still authenticate once. On macOS the credential is"
-echo "stored in that account's login Keychain, not under ~/.claude, so it is"
-echo "isolated per account and cannot be provisioned from here."
+
+if [[ -n "${MISSING_KEYS:-}" ]]; then
+  echo
+  echo "No Anthropic API key yet for: ${MISSING_KEYS}"
+  echo "Each of those accounts needs its own key, written as root:"
+  echo
+  for AGENT in ${MISSING_KEYS}; do
+    echo "  printf %s 'sk-ant-...' | sudo tee ${BASE_DIR}/${AGENT}/anthropic-api-key/api_key.txt >/dev/null"
+    echo "  sudo chown ${AGENT}:${ADMINS_GROUP} ${BASE_DIR}/${AGENT}/anthropic-api-key/api_key.txt"
+    echo "  sudo chmod 0400 ${BASE_DIR}/${AGENT}/anthropic-api-key/api_key.txt"
+  done
+  echo
+  echo "Give each agent its own key so they stay separate identities and can"
+  echo "be revoked independently. Until a key is in place the account cannot"
+  echo "authenticate: /login is not an option, since it writes to a login"
+  echo "keychain that no sudo session ever unlocks."
+fi

@@ -87,6 +87,22 @@ SOURCE_BIN="$(cd -P "$(dirname "${SOURCE_LINK}")" && readlink "${SOURCE_LINK}" |
 [[ -n "${SOURCE_BIN}" ]] || SOURCE_BIN="${SOURCE_LINK}"
 [[ -f "${SOURCE_BIN}" ]] || fail "Install symlink does not resolve to a file: ${SOURCE_BIN}"
 
+# The admin owner may keep a launcher symlink at ~/.local/bin/claude pointing at
+# the shared copy, so that `claude doctor` does not report the path as broken.
+# That makes this script's source resolve to its own destination: it would stage
+# the shared binary, rename it over itself, and report a successful publish
+# having shipped nothing. An admin who ran this expecting to roll out a new
+# version would be told it worked.
+#
+# Compared physically, since either path may itself be reached through a link.
+if [[ "$(cd -P "$(dirname "${SOURCE_BIN}")" && pwd -P)/$(basename "${SOURCE_BIN}")" \
+   == "$(cd -P "$(dirname "${SHARED_BIN}")" 2>/dev/null && pwd -P)/$(basename "${SHARED_BIN}")" ]]; then
+  fail "Source resolves to the shared copy itself (${SOURCE_BIN}).
+${ADMIN_OWNER}'s ~/.local/bin/claude is a launcher pointing here, not a real install.
+Install a version first, then re-run:
+  curl -fsSL https://claude.ai/install.sh | bash"
+fi
+
 VERSION="$(basename "${SOURCE_BIN}")"
 echo "Source: ${SOURCE_BIN} (version ${VERSION})"
 
@@ -128,26 +144,28 @@ sudo chown root:wheel "${PATHS_D_FILE}"
 sudo chmod 0644 "${PATHS_D_FILE}"
 echo "Registered on PATH: ${PATHS_D_FILE}"
 
-# The auto-updater rewrites the directory holding the binary, which only the
-# admin owner can do. Agents would retry and warn on every start, so it is
-# switched off for them.
+# The auto-updater is disabled for every account, the admin owner included.
 #
-# The test is write access to the install directory rather than an account name
-# or group: that is precisely the condition the updater needs, so the guard
-# stays correct on its own if ownership ever moves. Today it is true only for
-# the admin owner.
+# It is not a preference. The updater has no install location of its own: it
+# maintains $HOME/.local/share/claude, so any account that runs it acquires a
+# private ~300MB copy of the CLI and starts running that instead of the shared
+# one. Leaving it enabled anywhere means a private install exists there, and
+# deleting that install only lasts until the next session starts.
+#
+# The cost is that updates are manual -- install, publish, delete, as the
+# header describes -- and that is the intended trade: exactly one copy of the
+# binary exists on this machine, and every account runs it.
 #
 # /etc/zshenv rather than /etc/zprofile because zshenv is sourced for every zsh
-# invocation, not just login shells -- an agent spawned non-interactively still
-# gets it. It is also why the guard is a single stat and not a subprocess.
+# invocation, not just login shells, so an account spawned non-interactively
+# still gets it.
 ZSHENV_BLOCK="$(cat <<EOF
 ${BLOCK_BEGIN}
-# Agents run the shared, admin-owned Claude Code install and cannot write it,
-# so the auto-updater is disabled for them. The owner keeps it enabled and
-# publishes new versions with install_claude_shared.sh.
-if [ ! -w "${SHARED_BIN_DIR}" ]; then
-  export DISABLE_AUTOUPDATER=1
-fi
+# Every account runs the single shared install published by
+# install_claude_shared.sh. The auto-updater is disabled unconditionally
+# because it would rebuild a private per-account copy under
+# ~/.local/share/claude and silently take that account off the shared binary.
+export DISABLE_AUTOUPDATER=1
 ${BLOCK_END}
 EOF
 )"
