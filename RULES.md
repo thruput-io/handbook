@@ -102,13 +102,21 @@ The rules below are a ladder: take the highest rung that applies, and descend on
 
 ### 4. Maintainability
 
+Our code is maintained by developers who did not write it, and following what the industry already does is what makes that possible: a maintainer who knows the conventions does not have to learn ours as well.
+
+This governs the **form** code takes — its structure, idioms, and naming — not what it does. We regularly build what has not been built before; the novelty belongs in the solution, assembled from parts and conventions a maintainer already recognises. Where nothing standard applies, the bar does not disappear, it becomes the surrounding code.
+
 #### Industry standards
 
-**MUST** — Use industry standards, widely accepted design patterns, and established coding conventions, so that our code can be maintained by any developer doing the same.
+**MUST** — Follow the established conventions, design patterns, and idioms of the language, framework, and ecosystem in use, so that any developer who knows them can maintain our code.
+
+#### Consistent with the codebase
+
+**MUST** — Follow the conventions of the surrounding code where no industry standard decides the question, rather than introduce a second way of doing the same thing.
 
 #### Demonstrable, not recalled
 
-**MUST** — Point at a standard to claim it: a maintained library or framework, a pattern in current use by a large active community, or a published convention. A practice recalled from experience is not a standard, and neither is one whose community has moved on. See [No learnt-pattern retreat](#no-learnt-pattern-retreat).
+**MUST** — Point at a standard whenever you invoke one as justification: a maintained library or framework, a pattern in current use by a large active community, or a published convention. A practice recalled from experience is not a standard, and neither is one whose community has moved on. Novel work is not required to cite a standard it does not have. See [No learnt-pattern retreat](#no-learnt-pattern-retreat).
 
 ---
 
