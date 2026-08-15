@@ -56,17 +56,19 @@ Without a clear notion of **WHY** a piece of code is being written, it should no
 
 ### 2. Accuracy
 
-#### Solve the WHY
+The code is a **subset** of the **WHY**: every part of it solves some part of the **WHY**, and no part of it reaches outside. The converse is NOT required — a change need not cover the whole **WHY**, which may take more than one change to satisfy. What the code does solve, it solves accurately.
 
-**MUST** — Solve every part of the stated **WHY**.
+#### Every part solves the WHY
+
+**MUST** — Trace every part of the code to the part of the stated **WHY** that it accurately solves.
 
 #### Nothing beyond the WHY
 
 **MUST NOT** — Solve more than the stated **WHY**.
 
-#### No partial solution
+#### Nothing solved poorly
 
-**MUST NOT** — Solve the stated **WHY** poorly.
+**MUST NOT** — Solve any part of the stated **WHY** poorly.
 
 ### 3. Simplicity
 
