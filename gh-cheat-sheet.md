@@ -49,7 +49,7 @@ One object per violation. These fields and **no others** — the API rejects unk
   "path": "src/foo.ts",
   "line": 42,
   "side": "RIGHT",
-  "body": "[Strictness over sloppiness](https://github.com/thruput-io/handbook/blob/main/PHILOSOPHY.md#strictness-over-sloppiness): what is wrong, briefly."
+  "body": "[No suppressed exit status](https://github.com/thruput-io/handbook/blob/main/RULES.md#no-suppressed-exit-status): what is wrong, briefly."
 }
 ```
 

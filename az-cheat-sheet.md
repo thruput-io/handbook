@@ -113,7 +113,7 @@ One POST per thread. Body in a file, e.g. `thread.json`:
     {
       "parentCommentId": 0,
       "commentType": "text",
-      "content": "[Strictness over sloppiness](https://github.com/thruput-io/handbook/blob/main/PHILOSOPHY.md#strictness-over-sloppiness): what is wrong, briefly."
+      "content": "[No suppressed exit status](https://github.com/thruput-io/handbook/blob/main/RULES.md#no-suppressed-exit-status): what is wrong, briefly."
     }
   ],
   "status": "active",
