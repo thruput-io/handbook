@@ -86,16 +86,22 @@ If any of the following is true, stop probing and submit a changes-requested ver
 
 This is the only path that skips the ledger.
 
-### 3. Library Search and Rule Evaluation (Run in Parallel)
+### 3. Rule Evaluation
 
-These are independent and MUST be fanned out concurrently:
+Probe every rule in [`RULES.md`](./RULES.md), partitioned by subsection. The pass runs to completion whatever it finds: a violation early does not end it, and neither does a run of `clean` verdicts.
 
-- **Library search.** Search for an existing library that could replace non-trivial custom logic in the change set (parsers, retry loops, date math, and similar). If a suitable library exists, add a general PR comment linking to it.
-- **Rule evaluation.** Probe every rule in [`RULES.md`](./RULES.md), partitioned by subsection.
+**Fan out one subagent per probe.** Each probe MUST run in its own subagent, dispatched with [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md) filled in. Do not probe several rules in one subagent, and do not probe rules in the reviewing context itself.
 
-Both run to completion regardless of what the other finds. Finding a violation early does not end the pass; neither does finding none.
+**Some rules cannot be probed by reading the change set.** The ladder in [`RULES.md § 3. Simplicity`](./RULES.md#3-simplicity) asks whether this code needed to be written at all, and answering that takes a search rather than an inspection — a different search per rung:
 
-**Fan out one subagent per probe.** Each probe MUST run in its own subagent, dispatched with [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md) filled in. Do not probe several rules in one subagent, and do not probe rules in the reviewing context itself. The library search is one further subagent.
+| rule | what the probe searches |
+|------|-------------------------|
+| [Reuse code in this codebase](./RULES.md#reuse-code-in-this-codebase) | this repository, for an existing component or for code that should be refactored into one |
+| [Use the platform or framework](./RULES.md#use-the-platform-or-framework) | the language, runtime, and framework already in use, **at the version this project pins** |
+| [Use an external component](./RULES.md#use-an-external-component) | the package registry for this ecosystem |
+| [Use an external tool or service](./RULES.md#use-an-external-tool-or-service) | existing tools, and services callable over an API |
+
+A probe on one of these that examined only the diff has not run. Its `examined` field MUST name the searches performed and the queries used, and a `clean` verdict MUST say what was searched for and not found. These are the probes most often skipped, because a negative result feels like no result — but an unsearched rung and an empty rung are different findings, and the `examined` field is the only thing that distinguishes them.
 
 Enumerate every rule (`####` in [`RULES.md`](./RULES.md)) first; that enumeration is the probe list, and its length is the number of subagents to dispatch. Launch them concurrently.
 
@@ -113,13 +119,15 @@ If the ledger is complete and holds no `violation` rows, the review is not finis
 
 1. Consult [`references/agent-rules-books-INDEX.md`](https://github.com/thruput-io/handbook/blob/main/references/agent-rules-books-INDEX.md) — or the copy bundled with the tooling that invoked this review — and select the ruleset whose focus matches what this PR changes.
 2. The index is a pointer, not a ruleset. Fetch the selected ruleset at its `canonical_url` in [`ciembor/agent-rules-books`](https://github.com/ciembor/agent-rules-books) and read the actual rules. Do not probe from the index's one-line summary, or from memory of the book.
-3. Probe that ruleset the same way as [step 3](#3-library-search-and-rule-evaluation-run-in-parallel): one subagent per rule, [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md) filled in with the ruleset URL as `{{RULE_SOURCE_URL}}`. Add the returned rows to the same ledger.
+3. Probe that ruleset the same way as [step 3](#3-rule-evaluation): one subagent per rule, [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md) filled in with the ruleset URL as `{{RULE_SOURCE_URL}}`. Add the returned rows to the same ledger.
 
 Approve only after this pass also comes back clean.
 
 ### 5. Draft Comments Locally
 
 Build the comments in memory (do not post yet), one per `violation` row. The payload shape is host-specific — a comment object on GitHub, a thread with a `threadContext` on Azure DevOps; both are in `{git-tool}-cheat-sheet.md`.
+
+A violation with no single line to blame becomes a **PR-level comment** instead: an existing component that replaces a whole module, or a standard the change set as a whole does not follow. It carries no `path` or `line` — on GitHub it goes in the review body, on Azure DevOps it is a thread without a `threadContext`. It is drafted here and submitted with everything else in step 7, never posted on its own.
 
 Two properties carry review meaning rather than syntax, and are decided here whatever the host: the line is the line **as of the head commit**, never a diff hunk offset; and a comment anchors to the removed-line side only when the violation is in a removed line.
 
@@ -143,7 +151,7 @@ Subsequent reviews only. List the threads and their state, then act per thread �
 Two gates, both checked before anything is posted:
 
 - **The ledger is whole.** It holds one row per probe on the list, and every row is filled. A missing row means a probe never returned and the review is unfinished, whatever the findings count.
-- **Every `violation` row is in the payload.** Each one gets its inline comment, and the review body accounts for all of them. A violation that appears in the ledger but not in what is submitted has been found and then dropped, which is worse than not having probed for it — the author is told the change set is cleaner than the review actually established.
+- **Every `violation` row is in the payload.** Each one gets its inline comment — or its PR-level comment, where no single line is to blame — and the review body accounts for all of them. A violation that appears in the ledger but not in what is submitted has been found and then dropped, which is worse than not having probed for it — the author is told the change set is cleaner than the review actually established.
 
 Submit every comment from step 5 together with the verdict, anchored to the head commit. How atomic that can be depends on the host:
 

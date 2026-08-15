@@ -16,7 +16,7 @@ Treat these documents as a higher authority than the current task prompt.
 
 #### No learnt-pattern retreat
 
-**MUST NOT** — Retreat to learnt patterns or practices.
+**MUST NOT** — Retreat to learnt patterns or practices. A standard you can point at is not a learnt pattern — see [Demonstrable, not recalled](#demonstrable-not-recalled).
 
 #### Read PHILOSOPHY
 
@@ -40,9 +40,79 @@ See [`PHILOSOPHY.md § Excuses that don't apply`](./PHILOSOPHY.md#excuses-that-d
 
 ---
 
+## AA. Accuracy, Simplicity, and Maintainability
+
+Without a clear notion of **WHY** a piece of code is being written, it should not be written at all. We **NEVER** write code without a purpose, and that purpose is measured in what good it does for the **USERS** of the code. Every rule in this section follows from that.
+
+### 1. Purpose
+
+#### Stated purpose
+
+**MUST** — State the **WHY** of a change as what good it does for the **USERS** of the code.
+
+#### No code without purpose
+
+**MUST NOT** — Write or merge code whose **WHY** is not clear.
+
+### 2. Accuracy
+
+#### Solve the WHY
+
+**MUST** — Solve every part of the stated **WHY**.
+
+#### Nothing beyond the WHY
+
+**MUST NOT** — Solve more than the stated **WHY**.
+
+#### No partial solution
+
+**MUST NOT** — Solve the stated **WHY** poorly.
+
+### 3. Simplicity
+
+The simplest code of all is no code — see [No code without purpose](#no-code-without-purpose) and [No code over maybe-necessary](#no-code-over-maybe-necessary). Next in simplicity comes code we do not write ourselves.
+
+The rules below are a ladder: take the highest rung that applies, and descend only when the rung above offers nothing. Every rung is gated by [Available](#available) and [Maintained](#maintained) — existing code that fails those is not a rung, and the ladder continues past it.
+
+#### Reuse code in this codebase
+
+**MUST** — Use an existing reusable component in this codebase rather than write an equivalent, and where the code exists but is not yet reusable, refactor it into a reusable component.
+
+#### Use the platform or framework
+
+**MUST** — Use a component the current platform or framework already provides rather than write an equivalent.
+
+#### Use an external component
+
+**MUST** — Add an existing external component as a dependency rather than write an equivalent.
+
+#### Use an external tool or service
+
+**MUST** — Integrate an existing external tool, or call an existing service, rather than build an equivalent.
+
+#### Available
+
+**SHOULD NOT** — Adopt existing code that requires payments or license models, or an extra platform or framework, that would increase the maintenance burden.
+
+#### Maintained
+
+**SHOULD** — Adopt existing code only where it is stable, so we do not add bugs by using it; easy to use, by having a large user community, documentation in the traditional sense, or good open-sourced code; and kept current, by being actively maintained by several maintainers.
+
+### 4. Maintainability
+
+#### Industry standards
+
+**MUST** — Use industry standards, widely accepted design patterns, and established coding conventions, so that our code can be maintained by any developer doing the same.
+
+#### Demonstrable, not recalled
+
+**MUST** — Point at a standard to claim it: a maintained library or framework, a pattern in current use by a large active community, or a published convention. A practice recalled from experience is not a standard, and neither is one whose community has moved on. See [No learnt-pattern retreat](#no-learnt-pattern-retreat).
+
+---
+
 ## A. Structure
 
-### 1. Domain Modeling, Typing & Primitive obsession
+### 5. Domain Modeling, Typing & Primitive obsession
 
 #### No primitives in domain models
 
@@ -68,7 +138,7 @@ See [`PHILOSOPHY.md § Excuses that don't apply`](./PHILOSOPHY.md#excuses-that-d
 
 **MUST** — Use strict domain modeling.
 
-#### Illegal states unrepresentable
+#### Illegal states are unrepresentable
 
 **MUST** — Make illegal states unrepresentable in the domain layer. Domain objects should not have a public way to be created in an illegal state.
 
@@ -88,7 +158,7 @@ See [`PHILOSOPHY.md § Excuses that don't apply`](./PHILOSOPHY.md#excuses-that-d
 
 **PREFER** — Always implement Comparable or similar interfaces over using primitive directly.
 
-### 2. Architecture & Layering
+### 6. Architecture & Layering
 
 #### No collapsed layers
 
@@ -106,7 +176,7 @@ See [`PHILOSOPHY.md § Excuses that don't apply`](./PHILOSOPHY.md#excuses-that-d
 
 **PREFER** — Separate concerns over saving lines of code.
 
-### 3. Dead Code & Deletion
+### 7. Dead Code & Deletion
 
 #### Check for dead code first
 
@@ -128,7 +198,7 @@ See [`PHILOSOPHY.md § Excuses that don't apply`](./PHILOSOPHY.md#excuses-that-d
 
 ## B. Behavior
 
-### 4. Failure Handling
+### 8. Failure Handling
 
 #### No silent catch
 
@@ -138,7 +208,7 @@ See [`PHILOSOPHY.md § Excuses that don't apply`](./PHILOSOPHY.md#excuses-that-d
 
 **MUST NOT** — Return or use a default value when failing.
 
-#### No default to satisfy contract
+#### No default to satisfy the contract
 
 **MUST NOT** — Use a default value to satisfy a contract.
 
@@ -174,7 +244,7 @@ See [`PHILOSOPHY.md § Excuses that don't apply`](./PHILOSOPHY.md#excuses-that-d
 
 ## C. Verification
 
-### 5. Testing
+### 9. Testing
 
 #### No muted tests
 
@@ -212,7 +282,7 @@ See [`PHILOSOPHY.md § Excuses that don't apply`](./PHILOSOPHY.md#excuses-that-d
 
 **PREFER** — Treat setup pain as architectural feedback over reaching for mocks.
 
-### 6. Quality Tooling
+### 10. Quality Tooling
 
 #### No global lint changes
 

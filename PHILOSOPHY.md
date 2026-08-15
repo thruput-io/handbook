@@ -63,7 +63,7 @@ unrepresentable.
 Strictness is the thread through all of them. It is also the one that cannot be checked mechanically,
 which is why it lives here and not in the ruleset: no tool reports "this was sloppy". What tools report
 are its symptoms, and those are rules — [Fail fast over fallback](./RULES.md#fail-fast-over-fallback),
-[Illegal states unrepresentable](./RULES.md#illegal-states-unrepresentable), and the rest.
+[Illegal states are unrepresentable](./RULES.md#illegal-states-are-unrepresentable), and the rest.
 
 ## Excuses that don't apply
 
@@ -84,7 +84,7 @@ The fallacy is generalizing a habit onto a case that has not been shown to need 
 [`2>/dev/null`](./RULES.md#no-discarded-diagnostics) to a command whose failure matters;
 [catching an exception only to log it and continue](./RULES.md#no-silent-catch);
 [branching on the platform](./RULES.md#no-speculative-portability) when the task fixes the platform;
-[substituting a default](./RULES.md#no-default-to-satisfy-contract) when an input is missing instead of
+[substituting a default](./RULES.md#no-default-to-satisfy-the-contract) when an input is missing instead of
 stopping. Each one converts a loud, diagnosable failure into a silent wrong answer, which is the opposite
 of failing fast. Add a safeguard when *this* path is shown to need it, and say what showed it.
 
