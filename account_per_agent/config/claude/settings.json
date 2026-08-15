@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "additionalDirectories": [
+      "//Users/Shared/workspace",
+      "~/workspace"
+    ],
+    "allow": [
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(get-gh-token.sh *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(mkdir *)",
+      "Read(//Users/Shared/workspace/**)",
+      "Read(~/workspace/**)",
+      "Read(//Users/Shared/admin_repo/handbook/**)",
+      "Read(~/.claude/**)",
+      "Read(~/secrets/**)",
+      "Edit(//Users/Shared/workspace/**)",
+      "Edit(~/workspace/**)",
+      "Edit(~/secrets/created_by_agent/**)",
+      "WebFetch"
+    ],
+    "deny": [
+      "Bash(sudo *)",
+      "Bash(su *)",
+      "Bash(git reset --hard *)",
+      "Edit(//Users/Shared/admin_repo/**)",
+      "Edit(~/.claude/**)",
+      "Edit(~/.gemini/**)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "env": {
+    "DISABLE_AUTOUPDATER": "1"
+  }
+}

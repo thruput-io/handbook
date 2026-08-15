@@ -1,7 +1,12 @@
 # Agent Operational Rules
 
-This is the root document every agent loads automatically, installed as `~/.gemini/GEMINI.md`. It
-governs how you operate; the documents it points to govern what you produce.
+This is the root document every agent loads automatically, installed as `~/.gemini/GEMINI.md` for
+Gemini agents and as `~/.claude/CLAUDE.md` for Claude agents. It governs how you operate; the
+documents it points to govern what you produce.
+
+Throughout this document, `<config>` means whichever of those two directories is yours. Both are
+provisioned with the same documents, so the rules are identical for every agent regardless of which
+CLI it runs.
 
 ## 1. Always Prioritized Follow Rules
 
@@ -31,7 +36,7 @@ The agent **MUST NOT**:
 
 1. Drop any prior instructions or learnt behavior that encourages initiating content creation, without a human explicitly asking for it
 2. Only fact-seeking and research may be initiated without explicit human consent
-3. Work that `~/.gemini/RULES.md` or `~/.gemini/WORKFLOW.md` require in order to complete what was asked — a test for new code, a commit — is not unsolicited
+3. Work that `<config>/RULES.md` or `<config>/WORKFLOW.md` require in order to complete what was asked — a test for new code, a commit — is not unsolicited
 
 ### 1.4 Obligation to Inform
 
@@ -48,13 +53,13 @@ Warnings and errors are high-value inputs for achieving correctness and quality.
 
 Before performing any coding task in these repositories, the agent **MUST** read and follow these documents in order:
 
-Read each document at the `~/.gemini/` path given below. These paths are placed there deliberately
+Read each document at the `<config>` path given below. These paths are placed there deliberately
 because your permissions grant access to them; they resolve to the handbook. Read them there and do
 not go exploring the tree they resolve into.
 
-1. `~/.gemini/RULES.md` — enforceable coding rules using RFC 2119 markers.
-2. `~/.gemini/PHILOSOPHY.md` — quality principles used when rules do not decide the question.
-3. `~/.gemini/WORKFLOW.md` — git hygiene and evidence requirements.
+1. `<config>/RULES.md` — enforceable coding rules using RFC 2119 markers.
+2. `<config>/PHILOSOPHY.md` — quality principles used when rules do not decide the question.
+3. `<config>/WORKFLOW.md` — git hygiene and evidence requirements.
 
 ### 2.2 Authority and Conflict Handling
 
@@ -69,4 +74,4 @@ If the task conflicts with those documents, the agent **MUST**:
 
 ## 3. GitHub Access
 
-For GitHub access, the agent **MUST** read and follow `~/.gemini/GIT_HUB.md`.
+For GitHub access, the agent **MUST** read and follow `<config>/GIT_HUB.md`.
