@@ -647,6 +647,43 @@ for agent in "${AGENT_NAMES[@]}"; do
   fi
 done
 
+# Everything above tests the filesystem layer. The tool layer is scoped
+# separately -- Claude Code confines file access to the working directory plus
+# permissions.additionalDirectories -- and the two can disagree: a path the OS
+# permits is refused if the tool layer does not have it in scope, and an entry
+# written in a form the schema does not honour grants nothing while looking
+# correct in the file.
+#
+# One agent, not all three: this is fleet-wide configuration read from a shared
+# settings file, so a second and third run would re-prove the same fact at the
+# cost of more inference. These are the only checks here that spend tokens.
+probe_agent="${AGENT_NAMES[0]}"
+printf "\n  [%s -- tool layer]\n" "${probe_agent}"
+
+probe_file="${SHARED_WORKSPACE}/.verify-scope-${probe_agent}"
+sudo -u "${probe_agent}" touch "${probe_file}" 2>/dev/null
+
+# Positive: started in its private workspace, the agent must still reach the
+# shared one. Both are listed in additionalDirectories; if that key were
+# ignored, this is what would fail.
+answer="$(as_user "${probe_agent}" "cd ~/workspace && claude -p \"Use the Read tool on ${probe_file} and reply with exactly one word: OK if it read, DENIED if refused.\" 2>/dev/null" | tail -1)"
+case "${answer}" in
+  *OK*)     ok "reaches the shared workspace from its own (additionalDirectories honoured)" ;;
+  *DENIED*) bad "cannot reach the shared workspace from its own -- additionalDirectories not in effect" ;;
+  *)        warn "shared-workspace scope check inconclusive: '${answer}'" ;;
+esac
+
+# Negative, and the control for the check above: without it, a run where every
+# path is reachable would report the positive as a pass and prove nothing.
+answer="$(as_user "${probe_agent}" "cd ~/workspace && claude -p \"Use the Read tool on /etc/hosts and reply with exactly one word: OK if it read, DENIED if refused.\" 2>/dev/null" | tail -1)"
+case "${answer}" in
+  *DENIED*) ok "file access is scoped -- a path outside both workspaces is refused" ;;
+  *OK*)     bad "read /etc/hosts -- file access is not scoped to the workspaces" ;;
+  *)        warn "out-of-scope check inconclusive: '${answer}'" ;;
+esac
+
+sudo rm -f "${probe_file}"
+
 # --- 10. authentication ----------------------------------------------------
 section "10. Authentication"
 note "credential source and liveness, per agent -- no key material leaves the agent"
