@@ -88,9 +88,6 @@ BASE_DIR="${AGENT_HOME_BASE:-${BASE_DIR}}"
 
 DEVELOPERS_GROUP="${DEVELOPERS_GROUP:-developers}"
 ADMINS_GROUP="${ADMINS_GROUP:-${DEFAULT_ADMINS_GROUP}}"
-SHARED_ROOT="${CLAUDE_SHARED_ROOT:-/Users/Shared/tools/claude}"
-SHARED_BIN_DIR="${SHARED_ROOT}/bin"
-SHARED_BIN="${SHARED_BIN_DIR}/claude"
 SHARED_WORKSPACE="${SHARED_WORKSPACE:-/Users/Shared/workspace}"
 
 HANDBOOK_DOCS=("RULES.md" "PHILOSOPHY.md" "WORKFLOW.md" "GIT_HUB.md")
@@ -149,75 +146,116 @@ printf "${C_HEAD}Claude Code fleet verification${C_OFF}\n"
 note "admin owner : ${ADMIN_OWNER}"
 note "agents      : ${AGENTS}"
 
-# --- 1. shared binary ------------------------------------------------------
-section "1. Shared binary"
+# --- 1-3. the binary every account runs -------------------------------------
+section "1. Binary: one install, shared by every account"
 
-check "binary exists at ${SHARED_BIN}" test -f "${SHARED_BIN}"
-check "binary is executable" test -x "${SHARED_BIN}"
+# Derived, not assumed. Earlier revisions hardcoded the publish location and
+# asserted its owner and mode, which tested how the binary got there rather
+# than what has to be true of it. That coupling makes the verifier fail on any
+# change of install method even when every property it exists to defend still
+# holds -- and it cannot validate a new method at all. So: ask each account
+# what it actually resolves, then assert the properties.
+#
+# CLAUDE_BIN may still be set explicitly to check a specific expected path.
+RESOLVED=""
+MISSING=""
+for user in "${ADMIN_OWNER}" "${AGENT_NAMES[@]}"; do
+  r="$(as_user "${user}" 'command -v claude' 2>/dev/null)"
+  if [[ -z "${r}" ]]; then
+    MISSING="${MISSING:+${MISSING} }${user}"
+  else
+    RESOLVED="${RESOLVED}${user}=${r}"$'\n'
+  fi
+done
 
-BIN_OWNER="$(stat_owner "${SHARED_BIN}")"
-if [[ "${BIN_OWNER}" == "${ADMIN_OWNER}:${DEVELOPERS_GROUP}" ]]; then
-  ok "binary owned by ${ADMIN_OWNER}:${DEVELOPERS_GROUP}"
+if [[ -z "${MISSING}" ]]; then
+  ok "claude resolves on PATH for every account"
 else
-  bad "binary owner is '${BIN_OWNER}', expected '${ADMIN_OWNER}:${DEVELOPERS_GROUP}'"
+  bad "claude does not resolve for: ${MISSING}"
 fi
 
-# 0750, not 750: stat_mode prepends the high bits, which are zero on a plain
-# file and 2 on the setgid directory below.
-BIN_MODE="$(stat_mode "${SHARED_BIN}")"
-if [[ "${BIN_MODE}" == "0750" ]]; then
-  ok "binary mode 0750 (agents read+execute, no write)"
+# P1: one binary. Divergence is the failure this whole arrangement exists to
+# prevent -- two accounts on different builds produce results that cannot be
+# compared or reproduced.
+UNIQUE_PATHS="$(printf '%s' "${RESOLVED}" | sed 's/^[^=]*=//' | sort -u | grep -c . || true)"
+CLAUDE_BIN_FOUND="$(printf '%s' "${RESOLVED}" | sed 's/^[^=]*=//' | sort -u | head -1)"
+if [[ "${UNIQUE_PATHS}" == "1" ]]; then
+  ok "every account resolves the same binary: ${CLAUDE_BIN_FOUND}"
 else
-  bad "binary mode is ${BIN_MODE}, expected 0750"
+  bad "accounts resolve different binaries:"$'\n'"$(printf '%s' "${RESOLVED}" | sed 's/^/        /')"
 fi
 
-DIR_MODE="$(stat_mode "${SHARED_BIN_DIR}")"
-if [[ "${DIR_MODE}" == "2750" ]]; then
-  ok "bin directory mode 2750"
-else
-  bad "bin directory mode is ${DIR_MODE}, expected 2750"
+if [[ -n "${CLAUDE_BIN:-}" && "${CLAUDE_BIN}" != "${CLAUDE_BIN_FOUND}" ]]; then
+  bad "expected ${CLAUDE_BIN}, accounts resolve ${CLAUDE_BIN_FOUND}"
 fi
 
-# --- 2. PATH registration --------------------------------------------------
-section "2. PATH registration"
-
-check "/etc/paths.d/claude exists" test -f /etc/paths.d/claude
-
-if [[ "$(cat /etc/paths.d/claude 2>/dev/null)" == "${SHARED_BIN_DIR}" ]]; then
-  ok "/etc/paths.d/claude points at ${SHARED_BIN_DIR}"
+# P2: outside every home. A binary inside an account's home is that account's
+# binary -- writable by it in practice, and invisible to the others.
+in_home=""
+for user in "${ADMIN_OWNER}" "${AGENT_NAMES[@]}"; do
+  case "${CLAUDE_BIN_FOUND}" in
+    "${BASE_DIR}/${user}/"*) in_home="${in_home:+${in_home} }${user}" ;;
+  esac
+done
+if [[ -z "${in_home}" ]]; then
+  ok "binary lives outside every account's home directory"
 else
-  bad "/etc/paths.d/claude content is '$(cat /etc/paths.d/claude 2>/dev/null)'"
+  bad "binary is inside the home of: ${in_home}"
 fi
+
+# P3: unwritable by agents, tested by use rather than inferred from a mode.
+# Modes miss ACLs, group membership and the effect of the parent directory,
+# and it is write access -- not any particular octal -- that matters.
+writable=""
+for agent in "${AGENT_NAMES[@]}"; do
+  if as_user "${agent}" "test -w '${CLAUDE_BIN_FOUND}'"; then
+    writable="${writable:+${writable} }${agent}"
+  fi
+done
+if [[ -z "${writable}" ]]; then
+  ok "no agent can write the binary"
+else
+  bad "binary is writable by: ${writable}"
+fi
+
+# Directory write governs replacement, so an unwritable file in a writable
+# directory can still be swapped wholesale.
+bindir_writable=""
+for agent in "${AGENT_NAMES[@]}"; do
+  if as_user "${agent}" "test -w '$(dirname "${CLAUDE_BIN_FOUND}")'"; then
+    bindir_writable="${bindir_writable:+${bindir_writable} }${agent}"
+  fi
+done
+if [[ -z "${bindir_writable}" ]]; then
+  ok "no agent can replace the binary (its directory is not writable)"
+else
+  bad "binary's directory is writable by: ${bindir_writable}"
+fi
+
+section "2. PATH hygiene"
 
 # path_helper performs no expansion, so a ~ in any drop-in silently yields a
-# PATH entry that resolves to nothing.
+# PATH entry that resolves to nothing. Kept mechanism-agnostic: it checks the
+# drop-in directory for a class of bug, not for our particular entry.
 if grep -l '~' /etc/paths.d/* >/dev/null 2>&1; then
   bad "a /etc/paths.d entry contains '~' (path_helper does not expand it): $(grep -l '~' /etc/paths.d/* | tr '\n' ' ')"
 else
   ok "no /etc/paths.d entry relies on ~ expansion"
 fi
 
-# --- 3. resolution and version parity --------------------------------------
-section "3. Resolution and version parity"
+section "3. Version parity"
 
 REF_VERSION=""
 for user in "${ADMIN_OWNER}" "${AGENT_NAMES[@]}"; do
-  resolved="$(as_user "${user}" 'command -v claude' 2>/dev/null)"
-  if [[ "${resolved}" == "${SHARED_BIN}" ]]; then
-    ok "${user}: claude resolves to the shared binary"
-  else
-    bad "${user}: claude resolves to '${resolved:-<not found>}'"
-    continue
-  fi
-
   version="$(as_user "${user}" 'claude --version' 2>/dev/null | /usr/bin/head -1)"
   if [[ -z "${REF_VERSION}" ]]; then
     REF_VERSION="${version}"
-    note "reference version: ${REF_VERSION}"
+    note "reference version: ${REF_VERSION:-<none>}"
   elif [[ "${version}" != "${REF_VERSION}" ]]; then
     bad "${user}: version '${version}' differs from '${REF_VERSION}'"
   fi
 done
+ok "all accounts report the same version"
 
 # --- 4. auto-updater guard -------------------------------------------------
 section "4. Auto-updater guard"
@@ -271,10 +309,10 @@ for user in "${ADMIN_OWNER}" "${AGENT_NAMES[@]}"; do
     ok "${user} has no private install"
   elif ! sudo test -L "${launcher}"; then
     bad "${user} has a real claude binary at ~/.local/bin/claude"
-  elif [[ "$(sudo readlink "${launcher}")" == "${SHARED_BIN}" ]]; then
+  elif [[ "$(sudo readlink "${launcher}")" == "${CLAUDE_BIN_FOUND}" ]]; then
     ok "${user}'s ~/.local/bin/claude is a launcher to the shared copy"
   else
-    bad "${user}'s ~/.local/bin/claude points at $(sudo readlink "${launcher}"), not the shared copy"
+    bad "${user}'s ~/.local/bin/claude points at $(sudo readlink "${launcher}"), not the binary the fleet runs"
   fi
 done
 
