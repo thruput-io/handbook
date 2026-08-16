@@ -41,9 +41,6 @@ SHARED_BIN="${SHARED_BIN_DIR}/claude"
 
 PATHS_D_NAME="claude"
 PATHS_D_FILE="/etc/paths.d/${PATHS_D_NAME}"
-ZSHENV_FILE="/etc/zshenv"
-BLOCK_BEGIN="# >>> claude shared install (managed by install_claude_shared.sh) >>>"
-BLOCK_END="# <<< claude shared install (managed by install_claude_shared.sh) <<<"
 
 user_in_group() {
   id -Gn "$1" 2>/dev/null | tr ' ' '\n' | grep -qx "$2"
@@ -175,37 +172,35 @@ echo "Registered on PATH: ${PATHS_D_FILE}"
 # /etc/zshenv rather than /etc/zprofile because zshenv is sourced for every zsh
 # invocation, not just login shells, so an account spawned non-interactively
 # still gets it.
-ZSHENV_BLOCK="$(cat <<EOF
-${BLOCK_BEGIN}
-# Every account runs the single shared install published by
-# install_claude_shared.sh. Updates are disabled unconditionally because any
-# update path rebuilds a private per-account copy under ~/.local/share/claude
-# and silently takes that account off the shared binary.
+# Updates are disabled through Claude Code's own machine-wide policy file
+# rather than the shell environment.
 #
-# DISABLE_UPDATES, not DISABLE_AUTOUPDATER. The latter only stops the
-# background check: a manual \`claude update\` still runs, and -- measured on
-# this fleet -- still downloads a full 293MB private install even when it
-# concludes the account is already on the current version. DISABLE_UPDATES
-# refuses outright ("Updates are disabled by your administrator"), which is
-# the documented setting for distributing through your own channel.
-export DISABLE_UPDATES=1
-${BLOCK_END}
-EOF
-)"
+# An earlier revision exported DISABLE_UPDATES from /etc/zshenv. That works, but
+# zshenv is read by every zsh invocation on the host, so a setting that concerns
+# one program ended up in the environment of every process every account starts.
+# Managed settings are root-owned, cannot be overridden by any user or project
+# setting, and reach Claude Code only.
+#
+# Unlike managed-mcp.json -- which takes exclusive control of MCP servers and
+# makes any --mcp-config session fail at startup -- a managed env entry has no
+# such side effect.
+#
+# It applies to the admin owner too, deliberately: nobody should be updating a
+# shared install in place. New versions arrive by publishing with this script.
+MANAGED_SETTINGS_DIR="/Library/Application Support/ClaudeCode"
+MANAGED_SETTINGS="${MANAGED_SETTINGS_DIR}/managed-settings.json"
 
-# Rewrite only our own block, so anything else in the file survives a re-run.
-EXISTING=""
-[[ -f "${ZSHENV_FILE}" ]] && EXISTING="$(sudo cat "${ZSHENV_FILE}")"
-REMAINDER="$(printf '%s\n' "${EXISTING}" | awk -v b="${BLOCK_BEGIN}" -v e="${BLOCK_END}" '
-  $0 == b { skip = 1; next }
-  $0 == e { skip = 0; next }
-  !skip   { print }
-')"
+assert_not_symlink "managed-settings" "${MANAGED_SETTINGS_DIR}"
+sudo mkdir -p "${MANAGED_SETTINGS_DIR}"
 
-printf '%s\n%s\n' "$(printf '%s' "${REMAINDER}" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')" "${ZSHENV_BLOCK}" \
-  | sudo tee "${ZSHENV_FILE}" >/dev/null
-sudo chown root:wheel "${ZSHENV_FILE}"
-sudo chmod 0644 "${ZSHENV_FILE}"
-echo "Auto-updater guard written: ${ZSHENV_FILE}"
+# DISABLE_UPDATES, not DISABLE_AUTOUPDATER. The latter only stops the background
+# check: a manual `claude update` still runs and -- measured on this fleet --
+# still writes a full private install under ~/.local/share/claude even when it
+# concludes the account is already current. DISABLE_UPDATES refuses outright.
+printf '%s\n' '{' '  "env": {' '    "DISABLE_UPDATES": "1"' '  }' '}' \
+  | sudo tee "${MANAGED_SETTINGS}" >/dev/null
+sudo chown root:wheel "${MANAGED_SETTINGS}"
+sudo chmod 0644 "${MANAGED_SETTINGS}"
+echo "Update guard written: ${MANAGED_SETTINGS}"
 
 echo "=== Done: claude ${VERSION} published to ${SHARED_BIN} ==="

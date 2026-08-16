@@ -266,17 +266,28 @@ ok "all accounts report the same version"
 # --- 4. auto-updater guard -------------------------------------------------
 section "4. Auto-updater guard"
 
-# Every account, the admin owner included. The updater maintains
-# $HOME/.local/share/claude and has no other install location, so any account
-# that runs it acquires a private copy and stops running the shared binary.
-for user in "${ADMIN_OWNER}" "${AGENT_NAMES[@]}"; do
-  value="$(as_user "${user}" 'echo "${DISABLE_UPDATES:-}"' 2>/dev/null)"
-  if [[ "${value}" == "1" ]]; then
-    ok "${user}: DISABLE_UPDATES=1"
+# The guard is delivered by Claude Code's machine-wide policy file, not by the
+# shell environment, so there is no variable to read from a session -- checking
+# for one would fail while the guard is working perfectly. What can be asserted
+# statically is that the policy file exists and is root-owned: a managed setting
+# that any account could edit is not managed.
+MANAGED_SETTINGS="/Library/Application Support/ClaudeCode/managed-settings.json"
+if ! sudo test -f "${MANAGED_SETTINGS}"; then
+  bad "no managed settings at ${MANAGED_SETTINGS}"
+else
+  ms_owner="$(stat_owner "${MANAGED_SETTINGS}")"
+  if [[ "${ms_owner}" == "root:wheel" ]]; then
+    ok "managed settings present and root-owned"
   else
-    bad "${user}: DISABLE_UPDATES='${value}', expected 1"
+    bad "managed settings owned by '${ms_owner}', expected root:wheel -- overridable"
   fi
-done
+
+  if sudo python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("env",{}).get("DISABLE_UPDATES")=="1" else 1)' "${MANAGED_SETTINGS}" 2>/dev/null; then
+    ok "managed settings disable updates"
+  else
+    bad "managed settings do not set DISABLE_UPDATES=1"
+  fi
+fi
 
 # The variable being set is not the property that matters -- the property is
 # that an update cannot happen. Those came apart on this fleet: with
