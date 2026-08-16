@@ -160,7 +160,13 @@ section "1. Binary: one install, shared by every account"
 RESOLVED=""
 MISSING=""
 for user in "${ADMIN_OWNER}" "${AGENT_NAMES[@]}"; do
-  r="$(as_user "${user}" 'command -v claude' 2>/dev/null)"
+  # Last path-looking line only, ANSI stripped. as_user runs a login shell,
+  # which is also where profile output appears -- banners, MOTDs, the agent
+  # denial notice. Taking raw stdout reads any of that as the answer, which is
+  # exactly how this broke once: johan's resolution came back as the denial
+  # summary and every derived check failed with it.
+  r="$(as_user "${user}" 'command -v claude' 2>/dev/null \
+        | sed 's/\x1b\[[0-9;]*m//g' | grep '^/' | tail -1)"
   if [[ -z "${r}" ]]; then
     MISSING="${MISSING:+${MISSING} }${user}"
   else

@@ -8,6 +8,8 @@
     "allow": [
       "Bash(git *)",
       "Bash(gh *)",
+      "Bash(GH_TOKEN=* gh *)",
+      "Bash(GH_TOKEN=*; gh *)",
       "Bash(get-gh-token.sh *)",
       "Bash(ls *)",
       "Bash(cat *)",
@@ -31,7 +33,8 @@
       "Bash(cp *)",
       "Bash(touch *)",
       "Bash(chmod *)",
-      "WebFetch"
+      "WebFetch",
+      "WebSearch"
     ],
     "deny": [
       "Bash(sudo *)",
