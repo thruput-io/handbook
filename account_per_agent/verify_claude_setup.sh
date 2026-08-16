@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+LIB_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+. "${LIB_DIR}/lib.sh"
+
 # Verifies everything install_claude_shared.sh and setup_claude.sh put in
 # place, from the perspective that matters: what each agent account can
 # actually reach and actually do.
@@ -78,57 +81,15 @@ as_user() {
   sudo -n -H -u "${user}" /bin/zsh -lc "$*"
 }
 
-OS_NAME="$(uname -s)"
-case "${OS_NAME}" in
-  Darwin) BASE_DIR="/Users"; DEFAULT_ADMINS_GROUP="admin" ;;
-  Linux)  BASE_DIR="/home";  DEFAULT_ADMINS_GROUP="sudo" ;;
-  *) echo "Unsupported platform: ${OS_NAME}" >&2; exit 2 ;;
-esac
-BASE_DIR="${AGENT_HOME_BASE:-${BASE_DIR}}"
 
-DEVELOPERS_GROUP="${DEVELOPERS_GROUP:-developers}"
 ADMINS_GROUP="${ADMINS_GROUP:-${DEFAULT_ADMINS_GROUP}}"
 SHARED_WORKSPACE="${SHARED_WORKSPACE:-/Users/Shared/workspace}"
 
 HANDBOOK_DOCS=("RULES.md" "PHILOSOPHY.md" "WORKFLOW.md" "GIT_HUB.md")
 RULES_ROOT_DOC="CLAUDE.md"
 
-user_in_group() { id -Gn "$1" 2>/dev/null | tr ' ' '\n' | grep -qx "$2"; }
 
-list_all_users() {
-  case "${OS_NAME}" in
-    Darwin) dscl . -list /Users 2>/dev/null ;;
-    Linux)  getent passwd | cut -d: -f1 ;;
-  esac
-}
 
-# Same derivation as setup.sh and setup_claude.sh, so the verifier checks the
-# same accounts the provisioners acted on rather than a hardcoded list that
-# could drift away from them.
-resolve_identities() {
-  local user admins="" agents=""
-
-  for user in $(list_all_users); do
-    user_in_group "${user}" "${DEVELOPERS_GROUP}" || continue
-    if user_in_group "${user}" "${ADMINS_GROUP}"; then
-      admins="${admins:+${admins} }${user}"
-    else
-      agents="${agents:+${agents} }${user}"
-    fi
-  done
-
-  ADMIN_OWNER="${ADMIN_OWNER:-${admins}}"
-  AGENTS="${AGENTS:-${agents}}"
-
-  if [[ -z "${ADMIN_OWNER}" || "${ADMIN_OWNER}" == *" "* ]]; then
-    echo "Cannot resolve a single admin owner (got: '${ADMIN_OWNER}'); set ADMIN_OWNER" >&2
-    exit 2
-  fi
-  if [[ -z "${AGENTS}" ]]; then
-    echo "No agent accounts found; set AGENTS" >&2
-    exit 2
-  fi
-}
 
 # Mode and owner:group of a path, without following symlinks.
 #

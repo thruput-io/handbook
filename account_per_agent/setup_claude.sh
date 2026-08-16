@@ -1,38 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Provisions ~/.claude for every agent account, the Claude Code counterpart to
-# what setup.sh does for ~/.gemini. The two are deliberately separate scripts:
-# setup.sh is in service and Gemini-specific, and a fault here must not be able
-# to take that fleet down.
-#
-# The binary itself is not installed here -- install_claude_shared.sh publishes
-# one admin-owned copy that every account runs. This script only provisions
-# configuration.
-#
-# Every check guards a privileged chown/chmod, and no caller recovers from a
-# failed check, so a failed assertion always ends the run.
-fail() {
-  echo "$*" >&2
-  exit 1
-}
+LIB_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+. "${LIB_DIR}/lib.sh"
 
-OS_NAME="$(uname -s)"
-case "${OS_NAME}" in
-  Darwin)
-    DEFAULT_HOME_BASE="/Users"
-    DEFAULT_ADMINS_GROUP="admin"
-    ;;
-  Linux)
-    DEFAULT_HOME_BASE="/home"
-    DEFAULT_ADMINS_GROUP="sudo"
-    ;;
-  *)
-    fail "Unsupported platform: ${OS_NAME} (supported: Darwin, Linux)"
-    ;;
-esac
 
-BASE_DIR="${AGENT_HOME_BASE:-${DEFAULT_HOME_BASE}}"
+
 
 # -P resolves symlinks in the invocation path, so the config symlinks this
 # script plants are physical paths every account can follow. See setup.sh.
@@ -93,75 +66,11 @@ HANDBOOK_DOCS=(
 AGENTS_DOC_SOURCE="use-rules-AGENTS.md"
 AGENTS_DOC_LINK_NAME="CLAUDE.md"
 
-DEVELOPERS_GROUP="${DEVELOPERS_GROUP:-developers}"
-ADMINS_GROUP="${ADMINS_GROUP:-${DEFAULT_ADMINS_GROUP}}"
 
-list_all_users() {
-  case "${OS_NAME}" in
-    Darwin) dscl . -list /Users 2>/dev/null ;;
-    Linux)  getent passwd | cut -d: -f1 ;;
-  esac
-}
 
-user_in_group() {
-  id -Gn "$1" 2>/dev/null | tr ' ' '\n' | grep -qx "$2"
-}
 
-# Identical derivation to setup.sh, so both scripts always agree on who is an
-# agent and who is the admin owner:
-#   AGENTS       in DEVELOPERS_GROUP, not in ADMINS_GROUP
-#   ADMIN_OWNER  in both
-resolve_identities() {
-  local user
-  local discovered_agents=""
-  local discovered_admins=""
 
-  for user in $(list_all_users); do
-    user_in_group "${user}" "${DEVELOPERS_GROUP}" || continue
 
-    if user_in_group "${user}" "${ADMINS_GROUP}"; then
-      discovered_admins="${discovered_admins:+${discovered_admins} }${user}"
-    else
-      discovered_agents="${discovered_agents:+${discovered_agents} }${user}"
-    fi
-  done
-
-  if [[ -z "${ADMIN_OWNER:-}" ]]; then
-    local admin_count=0
-    for user in ${discovered_admins}; do
-      admin_count=$((admin_count + 1))
-    done
-
-    (( admin_count != 0 )) || fail "No account is in both ${DEVELOPERS_GROUP} and ${ADMINS_GROUP}; set ADMIN_OWNER explicitly"
-    (( admin_count == 1 )) || fail "Several accounts are in both ${DEVELOPERS_GROUP} and ${ADMINS_GROUP} (${discovered_admins}); set ADMIN_OWNER explicitly"
-
-    ADMIN_OWNER="${discovered_admins}"
-    echo "Discovered ADMIN_OWNER: ${ADMIN_OWNER} (in ${DEVELOPERS_GROUP} + ${ADMINS_GROUP})"
-  fi
-
-  if [[ -z "${AGENTS:-}" ]]; then
-    AGENTS="${discovered_agents}"
-    echo "Discovered AGENTS: ${AGENTS:-<none>} (in ${DEVELOPERS_GROUP}, not in ${ADMINS_GROUP})"
-  fi
-
-  [[ -n "${AGENTS}" ]] || fail "No ${DEVELOPERS_GROUP} members outside ${ADMINS_GROUP} found; nothing to do"
-}
-
-assert_user_exists() {
-  local name="$1"
-
-  [[ "${name}" =~ ^[a-z_][a-z0-9_-]*$ ]] || fail "Invalid account name: ${name}"
-  id -u "${name}" >/dev/null 2>&1 || fail "User does not exist: ${name}"
-}
-
-assert_group_exists() {
-  local name="$1"
-
-  case "${OS_NAME}" in
-    Darwin) dscl . -read "/Groups/${name}" >/dev/null 2>&1 ;;
-    Linux)  getent group "${name}" >/dev/null 2>&1 ;;
-  esac || fail "Group does not exist: ${name}"
-}
 
 assert_identities() {
   [[ ${#AGENT_NAMES[@]} -gt 0 ]] || fail "AGENTS must name at least one agent account"

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+LIB_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+. "${LIB_DIR}/lib.sh"
+
 # Publishes one admin-owned copy of the Claude Code binary that every agent
 # account runs, and registers it on PATH for all users.
 #
@@ -22,54 +25,25 @@ set -euo pipefail
 # That is also the upgrade path -- there is no persistent private install to
 # run `claude update` against.
 
-fail() {
-  echo "$*" >&2
-  exit 1
-}
-
-OS_NAME="$(uname -s)"
-[[ "${OS_NAME}" == "Darwin" ]] || fail "This script targets macOS; got ${OS_NAME}"
-
-DEVELOPERS_GROUP="${DEVELOPERS_GROUP:-developers}"
-ADMINS_GROUP="${ADMINS_GROUP:-admin}"
 
 # Mirrors setup.sh: the shared tree is owned by the one account that is in both
 # the developers and admin groups, and is read-only to every other developer.
-SHARED_ROOT="${CLAUDE_SHARED_ROOT:-/Users/Shared/tools/claude}"
+case "${OS_NAME}" in
+  Darwin) DEFAULT_SHARED_ROOT="/Users/Shared/tools/claude" ;;
+  Linux)  DEFAULT_SHARED_ROOT="/srv/tools/claude" ;;
+esac
+
+SHARED_ROOT="${CLAUDE_SHARED_ROOT:-${DEFAULT_SHARED_ROOT}}"
 SHARED_BIN_DIR="${SHARED_ROOT}/bin"
 SHARED_BIN="${SHARED_BIN_DIR}/claude"
 
-PATHS_D_NAME="claude"
-PATHS_D_FILE="/etc/paths.d/${PATHS_D_NAME}"
 
-user_in_group() {
-  id -Gn "$1" 2>/dev/null | tr ' ' '\n' | grep -qx "$2"
-}
 
-# Same derivation as setup.sh, so both scripts agree on who the admin owner is
-# without either hardcoding an account name.
-resolve_admin_owner() {
-  local user
-  local found=""
-  local count=0
-
-  for user in $(dscl . -list /Users 2>/dev/null); do
-    user_in_group "${user}" "${DEVELOPERS_GROUP}" || continue
-    user_in_group "${user}" "${ADMINS_GROUP}" || continue
-    found="${found:+${found} }${user}"
-    count=$((count + 1))
-  done
-
-  (( count == 1 )) || fail "Expected exactly one ${DEVELOPERS_GROUP}+${ADMINS_GROUP} account, found ${count} (${found:-none}); set ADMIN_OWNER explicitly"
-  ADMIN_OWNER="${found}"
-  echo "Discovered ADMIN_OWNER: ${ADMIN_OWNER}"
-}
-
-[[ -n "${ADMIN_OWNER:-}" ]] || resolve_admin_owner
+resolve_identities
 [[ "${ADMIN_OWNER}" =~ ^[a-z_][a-z0-9_-]*$ ]] || fail "Invalid account name: ${ADMIN_OWNER}"
 id -u "${ADMIN_OWNER}" >/dev/null 2>&1 || fail "User does not exist: ${ADMIN_OWNER}"
 
-ADMIN_HOME="$(dscl . -read "/Users/${ADMIN_OWNER}" NFSHomeDirectory 2>/dev/null | awk '{print $2}')"
+ADMIN_HOME="$(home_of "${ADMIN_OWNER}")"
 [[ -d "${ADMIN_HOME}" ]] || fail "Cannot resolve home directory for ${ADMIN_OWNER}"
 
 # The installer maintains ~/.local/bin/claude as a symlink to the versioned
@@ -149,13 +123,23 @@ sudo chmod 2750 "${SHARED_ROOT}" "${SHARED_BIN_DIR}"
 
 echo "Installed: ${SHARED_BIN}"
 
-# Same mechanism as register_on_path in setup.sh. path_helper reads this for
-# login shells, which is how the agents already pick up agent-scripts and
-# gcloud. Note it does not expand ~, so the path must be absolute.
-printf '%s\n' "${SHARED_BIN_DIR}" | sudo tee "${PATHS_D_FILE}" >/dev/null
-sudo chown root:wheel "${PATHS_D_FILE}"
-sudo chmod 0644 "${PATHS_D_FILE}"
-echo "Registered on PATH: ${PATHS_D_FILE}"
+# Same mechanism as register_on_path in setup.sh: a drop-in the login shell
+# already reads, which is how the agents pick up agent-scripts and gcloud.
+# Neither form expands ~, so the path must be absolute.
+case "${OS_NAME}" in
+  Darwin)
+    PATH_REGISTRATION="/etc/paths.d/claude"
+    printf '%s\n' "${SHARED_BIN_DIR}" | sudo tee "${PATH_REGISTRATION}" >/dev/null
+    ;;
+  Linux)
+    PATH_REGISTRATION="/etc/profile.d/claude.sh"
+    printf 'PATH="%s:${PATH}"\n' "${SHARED_BIN_DIR}" | sudo tee "${PATH_REGISTRATION}" >/dev/null
+    ;;
+esac
+
+sudo chown "root:${ROOT_GROUP}" "${PATH_REGISTRATION}"
+sudo chmod 0644 "${PATH_REGISTRATION}"
+echo "Registered on PATH: ${PATH_REGISTRATION}"
 
 # The auto-updater is disabled for every account, the admin owner included.
 #
@@ -169,28 +153,8 @@ echo "Registered on PATH: ${PATHS_D_FILE}"
 # header describes -- and that is the intended trade: exactly one copy of the
 # binary exists on this machine, and every account runs it.
 #
-# /etc/zshenv rather than /etc/zprofile because zshenv is sourced for every zsh
-# invocation, not just login shells, so an account spawned non-interactively
-# still gets it.
-# Updates are disabled through Claude Code's own machine-wide policy file
-# rather than the shell environment.
-#
-# An earlier revision exported DISABLE_UPDATES from /etc/zshenv. That works, but
-# zshenv is read by every zsh invocation on the host, so a setting that concerns
-# one program ended up in the environment of every process every account starts.
-# Managed settings are root-owned, cannot be overridden by any user or project
-# setting, and reach Claude Code only.
-#
-# Unlike managed-mcp.json -- which takes exclusive control of MCP servers and
-# makes any --mcp-config session fail at startup -- a managed env entry has no
-# such side effect.
-#
-# It applies to the admin owner too, deliberately: nobody should be updating a
-# shared install in place. New versions arrive by publishing with this script.
-MANAGED_SETTINGS_DIR="/Library/Application Support/ClaudeCode"
 MANAGED_SETTINGS="${MANAGED_SETTINGS_DIR}/managed-settings.json"
 
-assert_not_symlink "managed-settings" "${MANAGED_SETTINGS_DIR}"
 sudo mkdir -p "${MANAGED_SETTINGS_DIR}"
 
 # DISABLE_UPDATES, not DISABLE_AUTOUPDATER. The latter only stops the background

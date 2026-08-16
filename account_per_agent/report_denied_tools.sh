@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+LIB_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+. "${LIB_DIR}/lib.sh"
+
 # Reports tool calls the permission layer refused, across every agent, so the
 # allow list in config/claude/settings.json can be tuned from what agents
 # actually needed rather than from what someone guessed they would need.
@@ -19,18 +22,8 @@ set -uo pipefail
 # command is missing from the list -- every check keeps passing while agents
 # quietly work around gaps.
 
-OS_NAME="$(uname -s)"
-case "${OS_NAME}" in
-  Darwin) BASE_DIR="/Users" ;;
-  Linux)  BASE_DIR="/home" ;;
-  *) echo "Unsupported platform: ${OS_NAME}" >&2; exit 2 ;;
-esac
-BASE_DIR="${AGENT_HOME_BASE:-${BASE_DIR}}"
 
-DEVELOPERS_GROUP="${DEVELOPERS_GROUP:-developers}"
-ADMINS_GROUP="${ADMINS_GROUP:-admin}"
 
-user_in_group() { id -Gn "$1" 2>/dev/null | tr ' ' '\n' | grep -qx "$2"; }
 
 # Same agent derivation as the provisioning scripts: members of the developers
 # group that are not administrators.
