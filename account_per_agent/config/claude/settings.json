@@ -1,6 +1,6 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions",
+    "defaultMode": "dontAsk",
     "additionalDirectories": [
       "//Users/Shared/workspace",
       "~/workspace"
@@ -20,6 +20,17 @@
       "Edit(//Users/Shared/workspace/**)",
       "Edit(~/workspace/**)",
       "Edit(~/secrets/created_by_agent/**)",
+      "Bash(python3 *)",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(make *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(mv *)",
+      "Bash(cp *)",
+      "Bash(touch *)",
+      "Bash(chmod *)",
       "WebFetch"
     ],
     "deny": [
@@ -28,14 +39,25 @@
       "Bash(git reset --hard *)",
       "Read(~/anthropic-api-key/**)",
       "Edit(~/anthropic-api-key/**)",
-      "Edit(//Users/Shared/admin_repo/**)",
-      "Edit(~/.claude/**)",
-      "Edit(~/.gemini/**)"
+      "Edit(//Users/Shared/admin_repo/**)"
     ]
   },
   "enableAllProjectMcpServers": true,
   "apiKeyHelper": "/Users/Shared/admin_repo/handbook/account_per_agent/config/scripts/get-anthropic-key.sh",
   "env": {
-    "DISABLE_AUTOUPDATER": "1"
+    "DISABLE_UPDATES": "1"
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/Shared/admin_repo/handbook/account_per_agent/config/scripts/report-session-denials.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
   }
 }

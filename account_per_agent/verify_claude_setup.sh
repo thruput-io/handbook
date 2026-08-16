@@ -68,7 +68,7 @@ check() {
 #
 # A login zsh, not sh, and not a bare zsh. PATH reaches the agents through
 # path_helper, which runs from /etc/zprofile and therefore only in a login
-# shell; DISABLE_AUTOUPDATER reaches them from /etc/zshenv, which sh never
+# shell; DISABLE_UPDATES reaches them from /etc/zshenv, which sh never
 # reads at all. Under /bin/sh both come back empty and the verifier reports
 # failures against a configuration that is in fact correct -- it would be
 # testing a shell no agent ever gets.
@@ -226,11 +226,31 @@ section "4. Auto-updater guard"
 # $HOME/.local/share/claude and has no other install location, so any account
 # that runs it acquires a private copy and stops running the shared binary.
 for user in "${ADMIN_OWNER}" "${AGENT_NAMES[@]}"; do
-  value="$(as_user "${user}" 'echo "${DISABLE_AUTOUPDATER:-}"' 2>/dev/null)"
+  value="$(as_user "${user}" 'echo "${DISABLE_UPDATES:-}"' 2>/dev/null)"
   if [[ "${value}" == "1" ]]; then
-    ok "${user}: DISABLE_AUTOUPDATER=1"
+    ok "${user}: DISABLE_UPDATES=1"
   else
-    bad "${user}: DISABLE_AUTOUPDATER='${value}', expected 1"
+    bad "${user}: DISABLE_UPDATES='${value}', expected 1"
+  fi
+done
+
+# The variable being set is not the property that matters -- the property is
+# that an update cannot happen. Those came apart on this fleet: with
+# DISABLE_AUTOUPDATER=1 set and reported correctly, `claude update` still ran
+# and still wrote a full 293MB private install, while concluding the account
+# was already on the current version. Every mode, path, and env assertion here
+# passed throughout. Only running the command exposed it.
+#
+# So this invokes the real command and requires a refusal. If the guard ever
+# regresses, the attempt may leave a private install behind -- which is exactly
+# what the next block reports, so the failure is caught twice rather than
+# hidden.
+for user in "${ADMIN_OWNER}" "${AGENT_NAMES[@]}"; do
+  update_out="$(as_user "${user}" 'claude update 2>&1' || true)"
+  if [[ "${update_out}" == *"disabled by your administrator"* ]]; then
+    ok "${user}: claude update refused"
+  else
+    bad "${user}: claude update was NOT refused -- it may have installed a private copy"
   fi
 done
 
@@ -260,6 +280,56 @@ done
 
 # --- 5. per-agent configuration --------------------------------------------
 section "5. Per-agent configuration"
+
+# A deny pattern wider than the thing it defends silently disables features
+# inside the same tree. `Edit(~/.claude/**)` was written to stop an agent
+# replacing its own rule documents -- all of which are direct children of
+# ~/.claude -- but `**` also reaches ~/.claude/projects/<slug>/memory/, so
+# every agent lost the ability to record anything between sessions. Nothing
+# else here would show it: the directory modes are right, the documents are
+# readable, and the filesystem write probe in section 6 passes, because the
+# block is at Claude Code's permission layer rather than the filesystem's.
+#
+# The rule documents are protected without it. The sticky bit on ~/.claude
+# stops an agent unlinking them (proved in section 6), and writing *through*
+# a symlink lands in the handbook, which Edit(//Users/Shared/admin_repo/**)
+# denies.
+# Read through an agent's own symlink, so this checks the settings the fleet
+# actually runs rather than the copy in the repo.
+AGENT_SETTINGS="${BASE_DIR}/${AGENT_NAMES[0]}/.claude/settings.json"
+covering="$(sudo python3 - "${AGENT_SETTINGS}" <<'PY' 2>/dev/null
+import json, sys, fnmatch
+deny = json.load(open(sys.argv[1]))["permissions"].get("deny", [])
+target = "~/.claude/projects/example/memory/notes.md"
+print(" ".join(r for r in deny
+               if r.startswith("Edit(") and fnmatch.fnmatch(target, r[5:-1].replace("**", "*"))))
+PY
+)"
+if [[ -z "${covering}" ]]; then
+  ok "no deny rule blocks agent memory (~/.claude/projects/**)"
+else
+  bad "deny rule blocks agent memory: ${covering} -- agents cannot persist anything between sessions"
+fi
+
+# dontAsk, not bypassPermissions. Both are silent -- neither ever prompts, which
+# is the property that matters for an unattended agent. They differ in what
+# happens to a call that matches no rule: bypassPermissions runs it, dontAsk
+# refuses it. Under bypassPermissions the allow list below is inert, because an
+# allow rule's only job is to auto-approve something that would otherwise
+# prompt, and nothing prompts; the file then describes a boundary that does not
+# exist. Under dontAsk the same list is the boundary.
+#
+# Project-scoped settings were tried as a way to keep bypass inside workspaces
+# and were abandoned: Claude Code anchors project settings at the *git* root, so
+# a file at the workspace top level is ignored once an agent works inside any
+# repository under it -- which is everywhere real work happens.
+mode="$(sudo python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["permissions"].get("defaultMode",""))' "${AGENT_SETTINGS}" 2>/dev/null)"
+if [[ "${mode}" == "dontAsk" ]]; then
+  ok "permission mode is dontAsk (never prompts; allow list is enforcing)"
+else
+  bad "permission mode is '${mode}', expected dontAsk"
+fi
+
 
 for agent in "${AGENT_NAMES[@]}"; do
   claude_dir="${BASE_DIR}/${agent}/.claude"

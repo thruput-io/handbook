@@ -83,8 +83,17 @@ SOURCE_LINK="${ADMIN_HOME}/.local/bin/claude"
 [[ -L "${SOURCE_LINK}" || -f "${SOURCE_LINK}" ]] \
   || fail "No Claude Code install found for ${ADMIN_OWNER} at ${SOURCE_LINK}; run the installer as ${ADMIN_OWNER} first"
 
-SOURCE_BIN="$(cd -P "$(dirname "${SOURCE_LINK}")" && readlink "${SOURCE_LINK}" || true)"
-[[ -n "${SOURCE_BIN}" ]] || SOURCE_BIN="${SOURCE_LINK}"
+# No fallback to the link path itself when readlink fails. Following the link
+# is what identifies the version -- the installer names each binary after it --
+# so a path that is not such a link carries no version to read. Substituting it
+# does not degrade gracefully: VERSION becomes basename("<...>/bin/claude"),
+# the literal string "claude", and the run ends with "Done: claude claude
+# published". The admin is told a publish succeeded and cannot see what shipped.
+[[ -L "${SOURCE_LINK}" ]] \
+  || fail "${SOURCE_LINK} is not a symlink. The installer maintains it as one, pointing at the versioned binary; a plain file there carries no version to publish."
+
+SOURCE_BIN="$(cd -P "$(dirname "${SOURCE_LINK}")" && readlink "${SOURCE_LINK}")" \
+  || fail "Cannot resolve the install symlink: ${SOURCE_LINK}"
 [[ -f "${SOURCE_BIN}" ]] || fail "Install symlink does not resolve to a file: ${SOURCE_BIN}"
 
 # The admin owner may keep a launcher symlink at ~/.local/bin/claude pointing at
@@ -104,6 +113,13 @@ Install a version first, then re-run:
 fi
 
 VERSION="$(basename "${SOURCE_BIN}")"
+
+# The version is reported to the admin and is the only signal that the intended
+# build shipped, so it is checked rather than trusted: anything that is not a
+# version number means the source was resolved wrongly, and publishing under a
+# meaningless label is worse than not publishing.
+[[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]] \
+  || fail "Source does not name a version (got '${VERSION}' from ${SOURCE_BIN}); refusing to publish"
 echo "Source: ${SOURCE_BIN} (version ${VERSION})"
 
 if [[ -L "${SHARED_BIN_DIR}" || -L "${SHARED_ROOT}" ]]; then
@@ -162,10 +178,17 @@ echo "Registered on PATH: ${PATHS_D_FILE}"
 ZSHENV_BLOCK="$(cat <<EOF
 ${BLOCK_BEGIN}
 # Every account runs the single shared install published by
-# install_claude_shared.sh. The auto-updater is disabled unconditionally
-# because it would rebuild a private per-account copy under
-# ~/.local/share/claude and silently take that account off the shared binary.
-export DISABLE_AUTOUPDATER=1
+# install_claude_shared.sh. Updates are disabled unconditionally because any
+# update path rebuilds a private per-account copy under ~/.local/share/claude
+# and silently takes that account off the shared binary.
+#
+# DISABLE_UPDATES, not DISABLE_AUTOUPDATER. The latter only stops the
+# background check: a manual \`claude update\` still runs, and -- measured on
+# this fleet -- still downloads a full 293MB private install even when it
+# concludes the account is already on the current version. DISABLE_UPDATES
+# refuses outright ("Updates are disabled by your administrator"), which is
+# the documented setting for distributing through your own channel.
+export DISABLE_UPDATES=1
 ${BLOCK_END}
 EOF
 )"
