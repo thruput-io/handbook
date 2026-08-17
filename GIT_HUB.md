@@ -51,12 +51,22 @@
          GH_TOKEN=$(get-gh-token.sh) gh pr create -R owner/repo --base main --head my-branch \
            --title "Short summary" --body "What changed and why."
 
-6. **Git over HTTPS is unresolved.** Authenticating `git pull` and `git push`
+6. **Never `cd` into a repository to run `git`.** Use `git -C`:
+
+       git -C /Users/Shared/workspace/repo status --short     # runs
+       cd /Users/Shared/workspace/repo && git status --short   # refused
+
+   Entering a directory and running `git` there can execute that directory's
+   hooks, so the combination requires approval and is refused outright. `git -C`
+   is one command against a named repository and carries no such risk. Plain
+   `git` in the directory you are already in is unaffected.
+
+7. **Git over HTTPS is unresolved.** Authenticating `git pull` and `git push`
    against a remote has no working form: embedding the token in the URL is
    refused, and the `GH_TOKEN=` rule covers `gh` only. Reach for a `gh`
    subcommand where one exists. If a task needs `git push`, say so rather than
    working around it -- the gap is known and belongs to whoever maintains the
    permission rules.
 
-7. **Never expose.** Never echo, log, print, or commit a token; never share it
+8. **Never expose.** Never echo, log, print, or commit a token; never share it
    with another agent, process, or account; never read another account's token.
