@@ -96,8 +96,21 @@ RULES_ROOT_DOC="CLAUDE.md"
 # setgid and sticky entirely, so 2750 reads back as 750 and 1775 as 775 -- the
 # two bits this setup depends on most would go unverified while appearing to
 # fail.
-stat_mode()  { sudo stat -f '%Mp%Lp' "$1" 2>/dev/null; }
-stat_owner() { sudo stat -f '%Su:%Sg' "$1" 2>/dev/null; }
+#
+# BSD stat and GNU stat share no format flags, so the OS decides which is
+# called. Without the Linux arm every mode and owner check reads back empty
+# there -- reporting the whole fleet misconfigured on the platform this setup
+# is moving to.
+case "${OS_NAME}" in
+  Darwin)
+    stat_mode()  { sudo stat -f '%Mp%Lp' "$1" 2>/dev/null; }
+    stat_owner() { sudo stat -f '%Su:%Sg' "$1" 2>/dev/null; }
+    ;;
+  Linux)
+    stat_mode()  { sudo stat -c '%04a' "$1" 2>/dev/null; }
+    stat_owner() { sudo stat -c '%U:%G' "$1" 2>/dev/null; }
+    ;;
+esac
 
 resolve_identities
 read -r -a AGENT_NAMES <<<"${AGENTS}"
