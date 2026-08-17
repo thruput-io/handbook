@@ -13,6 +13,8 @@
       "Bash(get-gh-token.sh *)",
       "Bash(ls *)",
       "Bash(cat *)",
+      "Bash(curl *)",
+      "Bash(base64 *)",
       "Bash(mkdir *)",
       "Read(//Users/Shared/workspace/**)",
       "Read(~/workspace/**)",
