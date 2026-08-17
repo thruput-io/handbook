@@ -216,25 +216,66 @@ section "2. PATH hygiene"
 # path_helper performs no expansion, so a ~ in any drop-in silently yields a
 # PATH entry that resolves to nothing. Kept mechanism-agnostic: it checks the
 # drop-in directory for a class of bug, not for our particular entry.
-if grep -l '~' /etc/paths.d/* >/dev/null 2>&1; then
-  bad "a /etc/paths.d entry contains '~' (path_helper does not expand it): $(grep -l '~' /etc/paths.d/* | tr '\n' ' ')"
+# Each drop-in is read rather than passed to `grep -l`, whose exit status is 2
+# both for an unreadable file and for a file it matched, and 1 for no match --
+# so a drop-in that could not be opened was indistinguishable from a clean one
+# and reported as passing.
+PATHS_D_TILDE=""
+PATHS_D_UNREADABLE=""
+for drop_in in /etc/paths.d/*; do
+  [[ -e "${drop_in}" ]] || continue
+
+  if ! drop_in_contents="$(sudo cat "${drop_in}" 2>/dev/null)"; then
+    PATHS_D_UNREADABLE="${PATHS_D_UNREADABLE:+${PATHS_D_UNREADABLE} }${drop_in}"
+    continue
+  fi
+
+  case "${drop_in_contents}" in
+    *"~"*) PATHS_D_TILDE="${PATHS_D_TILDE:+${PATHS_D_TILDE} }${drop_in}" ;;
+  esac
+done
+
+if [[ -n "${PATHS_D_UNREADABLE}" ]]; then
+  bad "unreadable /etc/paths.d entries, so this check proves nothing: ${PATHS_D_UNREADABLE}"
+elif [[ -n "${PATHS_D_TILDE}" ]]; then
+  bad "a /etc/paths.d entry contains '~' (path_helper does not expand it): ${PATHS_D_TILDE}"
 else
   ok "no /etc/paths.d entry relies on ~ expansion"
 fi
 
 section "3. Version parity"
 
+# The reported string is required to carry a version number, and the summary
+# line is conditional on the comparison having happened. Previously an account
+# that could not run `claude --version` returned empty, which both seeded the
+# reference and left the -z branch true for every later account, so no
+# comparison ever ran -- and the pass was printed unconditionally afterwards,
+# alongside any mismatch it was meant to exclude.
 REF_VERSION=""
+VERSION_MISMATCH=0
+VERSION_UNREADABLE=""
 for user in "${ADMIN_OWNER}" "${AGENT_NAMES[@]}"; do
   version="$(as_user "${user}" 'claude --version' 2>/dev/null | /usr/bin/head -1)"
+
+  if [[ ! "${version}" =~ [0-9]+\.[0-9]+\.[0-9]+ ]]; then
+    VERSION_UNREADABLE="${VERSION_UNREADABLE:+${VERSION_UNREADABLE} }${user}"
+    continue
+  fi
+
   if [[ -z "${REF_VERSION}" ]]; then
     REF_VERSION="${version}"
-    note "reference version: ${REF_VERSION:-<none>}"
+    note "reference version: ${REF_VERSION}"
   elif [[ "${version}" != "${REF_VERSION}" ]]; then
     bad "${user}: version '${version}' differs from '${REF_VERSION}'"
+    VERSION_MISMATCH=1
   fi
 done
-ok "all accounts report the same version"
+
+if [[ -n "${VERSION_UNREADABLE}" ]]; then
+  bad "no version reported by: ${VERSION_UNREADABLE}"
+elif (( VERSION_MISMATCH == 0 )); then
+  ok "all accounts report the same version"
+fi
 
 # --- 4. auto-updater guard -------------------------------------------------
 section "4. Auto-updater guard"
@@ -495,11 +536,18 @@ section "8. Credential isolation"
 # accounts, rather than through as_user -- the leak this guards against is a
 # property of that transition.
 for agent in "${AGENT_NAMES[@]}"; do
-  leaked="$(sudo -n -i -u "${agent}" /usr/bin/env 2>/dev/null | grep -c '^SSH_AUTH_SOCK=')"
-  if [[ "${leaked}" == "0" ]]; then
-    ok "${agent}: does not inherit an ssh-agent socket"
-  else
+  # The environment is captured before it is searched, and the transition is
+  # confirmed to have reached the intended account. Piping straight into
+  # `grep -c` discarded sudo's status: a refused transition printed nothing,
+  # counted zero, and reported a pass having inspected no environment at all.
+  agent_env="$(sudo -n -i -u "${agent}" /usr/bin/env 2>/dev/null)"
+
+  if ! grep -qx "USER=${agent}" <<<"${agent_env}"; then
+    bad "${agent}: cannot read the environment through 'sudo -i -u' -- the ssh-agent check proves nothing"
+  elif grep -q '^SSH_AUTH_SOCK=' <<<"${agent_env}"; then
     bad "${agent}: inherits SSH_AUTH_SOCK -- can authenticate as the invoking user"
+  else
+    ok "${agent}: does not inherit an ssh-agent socket"
   fi
 done
 
