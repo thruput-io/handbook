@@ -766,7 +766,7 @@ for agent in "${AGENT_NAMES[@]}"; do
   fi
 
   if ! sudo test -d "${gh_secrets_dir}"; then
-    warn "${agent}: no GitHub credentials provisioned yet (${gh_secrets_dir})"
+    warn "${agent}: no GitHub credentials provisioned yet -- needs client_id.txt, installation_id.txt and private_key.pem in ${gh_secrets_dir}"
     continue
   fi
 
