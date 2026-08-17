@@ -84,6 +84,16 @@ as_user() {
 
 SHARED_WORKSPACE="${SHARED_WORKSPACE:-/Users/Shared/workspace}"
 
+# Parsing without reading proves only that the file is JSON. A settings.json
+# missing defaultMode, the allow list, additionalDirectories or apiKeyHelper
+# parses perfectly and configures nothing, so the keys the setup depends on are
+# named here and their absence fails the check.
+SETTINGS_CARRIES_ITS_KEYS='import json,sys
+d = json.load(open(sys.argv[1]))
+p = d.get("permissions", {})
+required = [p.get("defaultMode"), p.get("allow"), p.get("additionalDirectories"), d.get("apiKeyHelper")]
+sys.exit(0 if all(required) else 1)'
+
 HANDBOOK_DOCS=("RULES.md" "PHILOSOPHY.md" "WORKFLOW.md" "GIT_HUB.md")
 RULES_ROOT_DOC="CLAUDE.md"
 
@@ -433,10 +443,10 @@ for agent in "${AGENT_NAMES[@]}"; do
   done
 
   if as_user "${agent}" "test -r '${claude_dir}/settings.json'"; then
-    if as_user "${agent}" "python3 -c 'import json,sys; json.load(open(sys.argv[1]))' '${claude_dir}/settings.json'"; then
-      ok "settings.json readable and valid JSON"
+    if as_user "${agent}" "python3 -c '${SETTINGS_CARRIES_ITS_KEYS}' '${claude_dir}/settings.json'"; then
+      ok "settings.json readable, and carries the keys the setup depends on"
     else
-      bad "settings.json is not valid JSON"
+      bad "settings.json is not valid JSON, or is missing defaultMode, allow, additionalDirectories or apiKeyHelper"
     fi
   else
     bad "settings.json not readable by the agent"
@@ -551,12 +561,22 @@ for agent in "${AGENT_NAMES[@]}"; do
   fi
 done
 
-HELPER="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("apiKeyHelper",""))' \
-  "${BASE_DIR}/${AGENT_NAMES[0]}/.claude/settings.json" 2>/dev/null)"
-if [[ -n "${HELPER}" ]]; then
-  ok "apiKeyHelper configured"
-else
+# Four distinct states used to collapse into one empty string: settings.json
+# unreadable, invalid JSON, python3 missing, and the key genuinely absent. Two
+# of those are faults in the verifier rather than the fleet, and all four were
+# reported as "apiKeyHelper not set".
+SETTINGS_FILE="${BASE_DIR}/${AGENT_NAMES[0]}/.claude/settings.json"
+HELPER=""
+
+if ! sudo test -r "${SETTINGS_FILE}"; then
+  bad "cannot read ${SETTINGS_FILE} -- apiKeyHelper not verified"
+elif ! HELPER="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("apiKeyHelper",""))' "${SETTINGS_FILE}" 2>&1)"; then
+  bad "could not read apiKeyHelper out of settings.json: ${HELPER}"
+  HELPER=""
+elif [[ -z "${HELPER}" ]]; then
   bad "apiKeyHelper not set -- agents would fall back to /login and the Keychain"
+else
+  ok "apiKeyHelper configured"
 fi
 
 # These assertions name the key file and state what its modes should be, which
@@ -782,11 +802,26 @@ print(d.get("loggedIn"), d.get("apiKeySource"))
   # The whole exchange runs inside the agent's own shell -- the key is read by
   # the helper there and spent on the request there. Only the HTTP status code
   # crosses back, so the verifier still never handles key material.
-  http_code="$(as_user "${agent}" "key=\$('${HELPER}' 2>/dev/null) || exit 1
+  # A failing helper used to land on the same empty result as an unreachable
+  # network, and the empty case was reported as "offline?" -- a cause the code
+  # had no evidence for. The helper's own failures now name themselves.
+  http_code="$(as_user "${agent}" "key=\$('${HELPER}' 2>/dev/null) || { echo HELPER_FAILED; exit 0; }
+    [ -n \"\${key}\" ] || { echo HELPER_EMPTY; exit 0; }
     curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
       -H \"x-api-key: \${key}\" \
       -H 'anthropic-version: 2023-06-01' \
       https://api.anthropic.com/v1/models 2>/dev/null" 2>/dev/null || true)"
+
+  case "${http_code}" in
+    HELPER_FAILED)
+      bad "${agent}: the key helper exited non-zero -- no key to authenticate with"
+      continue
+      ;;
+    HELPER_EMPTY)
+      bad "${agent}: the key helper returned nothing -- no key to authenticate with"
+      continue
+      ;;
+  esac
 
   case "${http_code}" in
     200)
