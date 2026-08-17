@@ -12,6 +12,7 @@ LIB_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 HANDBOOK_DIR="$(dirname "${SCRIPT_DIR}")"
 CLAUDE_CONFIG_DIR="${SCRIPT_DIR}/config/claude"
+CLAUDE_SCRIPTS_DIR="${SCRIPT_DIR}/config/scripts"
 
 # Skills live at the top of the admin repo rather than under the Claude config
 # tree: they are shared material maintained on their own, not settings for one
@@ -131,6 +132,22 @@ apply_agent_skills_permission() {
 
   sudo find "${target}" -type d -exec chown "${ADMIN_OWNER}:${DEVELOPERS_GROUP}" {} +
   sudo find "${target}" -type d -exec chmod 2750 {} +
+}
+
+# The credential helpers are the one part of the config tree agents execute
+# rather than read, so they carry the config modes plus the execute bit. An
+# unmanaged directory here is not a cosmetic drift: settings.json reaches
+# apiKeyHelper by path, so a group the agents do not belong to costs every
+# account its authentication at once, and get-gh-token.sh with it.
+apply_admin_scripts_permission() {
+  local description="$1"
+  local target="$2"
+
+  assert_not_symlink "${description}" "${target}"
+
+  sudo chown -RhP "${ADMIN_OWNER}:${DEVELOPERS_GROUP}" "${target}"
+  sudo find "${target}" -type d -exec chmod 2750 {} +
+  sudo find "${target}" -type f -exec chmod 0750 {} +
 }
 
 apply_admin_config_permission() {
@@ -270,6 +287,11 @@ assert_identities
 [[ -f "${CLAUDE_CONFIG_DIR}/settings.json" ]] || fail "Missing ${CLAUDE_CONFIG_DIR}/settings.json"
 [[ -f "${CLAUDE_MCP_FILE}" ]] || fail "Missing ${CLAUDE_MCP_FILE}"
 
+[[ -d "${CLAUDE_SCRIPTS_DIR}" ]] || fail "Claude scripts directory not found: ${CLAUDE_SCRIPTS_DIR}"
+for HELPER in get-anthropic-key.sh get-gh-token.sh; do
+  [[ -f "${CLAUDE_SCRIPTS_DIR}/${HELPER}" ]] || fail "Missing credential helper: ${CLAUDE_SCRIPTS_DIR}/${HELPER}"
+done
+
 # Never created here. The skills directory is maintained content, so an
 # absent one means the source is wrong or the repo is not checked out --
 # creating it would provision every agent an empty skills tree and call it
@@ -277,6 +299,7 @@ assert_identities
 [[ -d "${CLAUDE_SKILLS_DIR}" ]] || fail "Skills source not found: ${CLAUDE_SKILLS_DIR}"
 
 apply_admin_config_permission "claude-config" "${CLAUDE_CONFIG_DIR}"
+apply_admin_scripts_permission "claude-scripts" "${CLAUDE_SCRIPTS_DIR}"
 
 # Link targets must exist and be group-readable before any agent gets a link to
 # them, or the link resolves to a file the agent cannot open.

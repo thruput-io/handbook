@@ -82,7 +82,6 @@ as_user() {
 }
 
 
-ADMINS_GROUP="${ADMINS_GROUP:-${DEFAULT_ADMINS_GROUP}}"
 SHARED_WORKSPACE="${SHARED_WORKSPACE:-/Users/Shared/workspace}"
 
 HANDBOOK_DOCS=("RULES.md" "PHILOSOPHY.md" "WORKFLOW.md" "GIT_HUB.md")
@@ -748,6 +747,62 @@ print(d.get("loggedIn"), d.get("apiKeySource"))
       bad "${agent}: unexpected API response (HTTP ${http_code})"
       ;;
   esac
+done
+
+# --- 11. github app token retrieval ----------------------------------------
+section "11. GitHub App token retrieval"
+note "per agent -- no token material leaves the agent's shell"
+
+GH_TOKEN_HELPER="get-gh-token.sh"
+
+for agent in "${AGENT_NAMES[@]}"; do
+  gh_secrets_dir="${BASE_DIR}/${agent}/secrets/github"
+
+  if as_user "${agent}" "command -v ${GH_TOKEN_HELPER} >/dev/null"; then
+    ok "${agent}: ${GH_TOKEN_HELPER} resolves on PATH"
+  else
+    bad "${agent}: ${GH_TOKEN_HELPER} not on PATH -- /etc/paths.d/agent-scripts missing or unreadable"
+    continue
+  fi
+
+  if ! sudo test -d "${gh_secrets_dir}"; then
+    warn "${agent}: no GitHub credentials provisioned yet (${gh_secrets_dir})"
+    continue
+  fi
+
+  gh_inputs_present=1
+  for gh_input in client_id.txt installation_id.txt private_key.pem; do
+    if ! sudo test -s "${gh_secrets_dir}/${gh_input}"; then
+      bad "${agent}: ${gh_input} missing or empty -- ${GH_TOKEN_HELPER} cannot mint a token"
+      gh_inputs_present=0
+    fi
+  done
+
+  if (( gh_inputs_present )); then
+    ok "${agent}: GitHub App inputs present (client id, installation id, private key)"
+
+    # The token is minted, matched and discarded inside the agent's own shell.
+    # Only the exit status crosses back, so no installation token is ever held
+    # in this script, printed, or written to a log.
+    if as_user "${agent}" "${GH_TOKEN_HELPER} 2>/dev/null | grep -qE '^gh[su]_[A-Za-z0-9_.-]{20,}$'"; then
+      ok "${agent}: retrieves a GitHub installation token (live)"
+    else
+      bad "${agent}: cannot retrieve a GitHub installation token"
+    fi
+  fi
+
+  # A GitHub App key is a durable identity, unlike the hour-long token it
+  # mints: an agent that reads another's key can act as that agent until the
+  # key is rotated. Group is admin, which no agent belongs to, so this asks
+  # whether that actually holds rather than trusting the mode.
+  for other in "${AGENT_NAMES[@]}"; do
+    [[ "${other}" != "${agent}" ]] || continue
+    if as_user "${other}" "test -r '${gh_secrets_dir}/private_key.pem'"; then
+      bad "${other}: can read ${agent}'s GitHub App private key"
+    else
+      ok "${other}: cannot read ${agent}'s GitHub App private key"
+    fi
+  done
 done
 
 # --- summary ---------------------------------------------------------------
