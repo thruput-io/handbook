@@ -754,6 +754,7 @@ section "11. GitHub App token retrieval"
 note "per agent -- no token material leaves the agent's shell"
 
 GH_TOKEN_HELPER="get-gh-token.sh"
+GH_PROBE_AGENT=""
 
 for agent in "${AGENT_NAMES[@]}"; do
   gh_secrets_dir="${BASE_DIR}/${agent}/secrets/github"
@@ -786,6 +787,7 @@ for agent in "${AGENT_NAMES[@]}"; do
     # in this script, printed, or written to a log.
     if as_user "${agent}" "${GH_TOKEN_HELPER} 2>/dev/null | grep -qE '^gh[su]_[A-Za-z0-9_.-]{20,}$'"; then
       ok "${agent}: retrieves a GitHub installation token (live)"
+      GH_PROBE_AGENT="${GH_PROBE_AGENT:-${agent}}"
     else
       bad "${agent}: cannot retrieve a GitHub installation token"
     fi
@@ -804,6 +806,41 @@ for agent in "${AGENT_NAMES[@]}"; do
     fi
   done
 done
+
+# The checks above prove the shell can mint a token. They say nothing about
+# whether an agent's session is allowed to ask for one: the tool layer decides
+# that from permissions.allow, and a helper that runs perfectly from zsh is
+# still useless to an agent whose Bash call is refused. That gap is the whole
+# reason the allow list names get-gh-token.sh and the inline-env gh form.
+#
+# One agent, as in section 9, and for the same reason -- the allow list is
+# fleet-wide. These checks spend tokens.
+if [[ -z "${GH_PROBE_AGENT}" ]]; then
+  warn "no agent has GitHub credentials -- tool-layer access not exercised"
+else
+  printf "\n  [%s -- tool layer]\n" "${GH_PROBE_AGENT}"
+
+  GH_HELPER_PROMPT='Run this exact command with the Bash tool: get-gh-token.sh >/dev/null. Reply with exactly one word: OK if the command ran, DENIED if the tool call was refused.'
+  answer="$(as_user "${GH_PROBE_AGENT}" "cd ~/workspace && claude -p '${GH_HELPER_PROMPT}' 2>/dev/null" | tail -1)"
+  case "${answer}" in
+    *DENIED*) bad "${GH_TOKEN_HELPER} is refused at the tool layer -- not covered by permissions.allow" ;;
+    *OK*)     ok "${GH_TOKEN_HELPER} is permitted at the tool layer" ;;
+    *)        warn "helper permission check inconclusive: '${answer}'" ;;
+  esac
+
+  # End to end, the way an agent actually reaches GitHub: mint into GH_TOKEN and
+  # spend it in the same command. /installation/repositories rather than /user,
+  # which an installation token cannot call -- a real repository count is
+  # evidence the App installation answered, not merely that a string looked
+  # like a token. The token is never printed; only the count comes back.
+  GH_ACCESS_PROMPT='Run this exact command with the Bash tool: GH_TOKEN=$(get-gh-token.sh) gh api /installation/repositories --jq .total_count -- then reply with exactly the number it printed, or the single word DENIED if the tool call was refused.'
+  answer="$(as_user "${GH_PROBE_AGENT}" "cd ~/workspace && claude -p '${GH_ACCESS_PROMPT}' 2>/dev/null" | tail -1)"
+  case "${answer}" in
+    *DENIED*)  bad "cannot reach GitHub at the tool layer -- the inline-env gh form is refused" ;;
+    *[0-9]*)   ok "reaches GitHub as the App installation (${answer} repositories visible)" ;;
+    *)         warn "GitHub access check inconclusive: '${answer}'" ;;
+  esac
+fi
 
 # --- summary ---------------------------------------------------------------
 printf "\n${C_HEAD}Summary${C_OFF}\n"
