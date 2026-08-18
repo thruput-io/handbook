@@ -1,0 +1,65 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "additionalDirectories": [
+      "//Users/Shared/workspace",
+      "~/workspace"
+    ],
+    "allow": [
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(GH_TOKEN=* gh *)",
+      "Bash(GH_TOKEN=*; gh *)",
+      "Bash(get-gh-token.sh *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(curl *)",
+      "Bash(base64 *)",
+      "Bash(mkdir *)",
+      "Read(//Users/Shared/workspace/**)",
+      "Read(~/workspace/**)",
+      "Read(//Users/Shared/admin_repo/handbook/**)",
+      "Read(~/.claude/**)",
+      "Read(~/secrets/**)",
+      "Edit(//Users/Shared/workspace/**)",
+      "Edit(~/workspace/**)",
+      "Edit(~/secrets/created_by_agent/**)",
+      "Bash(python3 *)",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(make *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(mv *)",
+      "Bash(cp *)",
+      "Bash(touch *)",
+      "Bash(chmod *)",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": [
+      "Bash(sudo *)",
+      "Bash(su *)",
+      "Bash(git reset --hard *)",
+      "Read(~/anthropic-api-key/**)",
+      "Edit(~/anthropic-api-key/**)",
+      "Edit(//Users/Shared/admin_repo/**)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "apiKeyHelper": "/Users/Shared/admin_repo/handbook/account_per_agent/config/scripts/get-anthropic-key.sh",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/Shared/admin_repo/handbook/account_per_agent/config/scripts/report-session-denials.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
