@@ -204,11 +204,43 @@ This governs the **form** code takes — its structure, idioms, and naming — n
 
 **MUST NOT** — Add platform, shell, or environment compatibility branches for environments the task does not run in.
 
+### 8. Comments
+
+#### No comments in code
+
+**MUST NOT** — Comment code, configuration, or any other version-controlled artifact. A comment is exempt only where something other than a human reader requires it: a shebang; a machine-read directive that is syntactically a comment (`# type: ignore`, `# noqa`, an SPDX identifier); API documentation extracted to a published doc site (Javadoc, KDoc, docstrings); a mandated license header; a generated-file banner. See [`PHILOSOPHY.md § Why a comment is not the place`](./PHILOSOPHY.md#why-a-comment-is-not-the-place).
+
+What the comment would have carried still belongs somewhere. Where depends on what it is.
+
+##### Clarification
+
+- Introduce a variable and name it for the intent. A name that reads as a whole sentence is fine — `frameworkRequiresThisToBeMutable` says it.
+- Break out a function, a submodule, or a separate file you can name for the intent — see [Separation over brevity](#separation-over-brevity).
+- Where a construct is strange, write a negative test showing why the straightforward way did not work.
+
+##### Procrastination (TODO)
+
+- Add a failing test pinning the weakness. That is how the reminder is left, and it is why the code cannot be merged — see [`WORKFLOW.md § Tests before code`](./WORKFLOW.md#tests-before-code).
+- Split the PR into smaller PRs, each production-ready and needing no further work once merged.
+- Write a plan document — see [`PLANNING.md`](./PLANNING.md).
+
+##### Architectural and design decision
+
+- Add an Architectural Decision Record in the `docs/adrs` folder.
+
+##### Usage documentation
+
+- Add a `README.md`, or update the existing one.
+
+##### Apology, crutch, or confession
+
+- Add a failing test pinning the weakness. Code carrying one is not merged.
+
 ---
 
 ## B. Behavior
 
-### 8. Failure Handling
+### 9. Failure Handling
 
 #### No silent catch
 
@@ -254,7 +286,7 @@ This governs the **form** code takes — its structure, idioms, and naming — n
 
 ## C. Verification
 
-### 9. Testing
+### 10. Testing
 
 #### No muted tests
 
@@ -292,7 +324,7 @@ This governs the **form** code takes — its structure, idioms, and naming — n
 
 **PREFER** — Treat setup pain as architectural feedback over reaching for mocks.
 
-### 10. Quality Tooling
+### 11. Quality Tooling
 
 #### No global lint changes
 

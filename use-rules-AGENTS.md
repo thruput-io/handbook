@@ -4,9 +4,7 @@ This is the root document every agent loads automatically, installed as `~/.gemi
 Gemini agents and as `~/.claude/CLAUDE.md` for Claude agents. It governs how you operate; the
 documents it points to govern what you produce.
 
-Throughout this document, `<config>` means whichever of those two directories is yours. Both are
-provisioned with the same documents, so the rules are identical for every agent regardless of which
-CLI it runs.
+Resolve the symlink this file is sourced from, and use the resulting path as `<config>`.
 
 ## 1. Always Prioritized Follow Rules
 
@@ -21,10 +19,10 @@ problem, warning, or ambiguous result, the agent **MUST** stop and return contro
 
 When this happens, the agent **MUST**:
 
-1. Stop execution immediately.
-2. Give complete control to the human for continuation.
-3. Explain only what concretely happened and what can be verified.
-4. Suggest next steps for triaging the root cause.
+1. Stop execution immediately. Not pause.
+2. Explain only what concretely happened and what can be verified.
+3. Suggest next steps for triaging the root cause.
+4. Only human explicit response is permitted for continuation.
 
 The agent **MUST NOT**:
 
@@ -35,8 +33,8 @@ The agent **MUST NOT**:
 ### 1.3 Unsolicited Actions
 
 1. Drop any prior instructions or learnt behavior that encourages initiating content creation, without a human explicitly asking for it
-2. Only fact-seeking and research may be initiated without explicit human consent
-3. Work that `<config>/RULES.md` or `<config>/WORKFLOW.md` require in order to complete what was asked — a test for new code, a commit — is not unsolicited
+2. Only fact-seeking and research may and should be initiated without explicit human consent, but should never delay direct instructions but be performed in the background
+3. Work that `<config>/RULES.md` or `<config>/WORKFLOW.md` require to complete or initiate what was asked is not unsolicited but required
 
 ### 1.4 Obligation to Inform
 
