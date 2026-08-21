@@ -10,25 +10,28 @@ Same RFC 2119 priority markers and the same anchor convention as [`RULES.md`](./
 
 #### No refactor and feature mix
 
-**MUST NOT** — Mix refactoring with new features on the same branch.
+**SHOULD NOT** — Mix refactoring with new features on the same branch.
 
 #### No mixed feature branches
 
-**MUST NOT** — Mix features that could have been separated into branches.
+**SHOULD NOT** — Mix features that could have been separated into branches.
 
-#### Refuse wrong branch purpose
+#### Refuse the wrong branch purpose
 
 **MUST** — Stop human by refusing new feature / refactoring on a branch started for something else.
 
-#### Not on main branch
+#### Not on the main branch
 
 **MUST** — Develop on a branch other than `main`.
 
 #### Up to date with main
 
-**MUST** — Keep the current branch up to date with `main`.
+**MUST** — Keep the current branch up to date with `main`. Pull latest before:
+- Making any changes in the new session
+- Before creating a branch
+- Before pushing 
 
-#### Clean before large task
+#### Clean before a large task
 
 **MUST** — Ensure there are no uncommitted changes before starting larger tasks.
 
@@ -40,7 +43,7 @@ Same RFC 2119 priority markers and the same anchor convention as [`RULES.md`](./
 
 **PREFER** — Merge related branches instead of post-splitting work.
 
-### 2. Evidence
+### 2. Evidence and TDD
 
 #### No changes without evidence
 
@@ -48,16 +51,14 @@ Same RFC 2119 priority markers and the same anchor convention as [`RULES.md`](./
 
 #### No assumptions without evidence
 
-**MUST NOT** — Make assumptions without evidence.
+**MUST NOT** — Make assumptions without evidence. Evidence is:
+- References to code in existing repos (full web url to the main branch)
+- Tests in existing repos (Never hesitate to add new tests just for proof on a discussion)
+- References to code in public repos (full web url to the main branch)
+- References to articles or documents on the web (full web url link to a specific section)
 
 #### Tests before code
 
-**MUST** — Write tests proving assumptions before writing code.
+**MUST** — Bugs or weaknesses MUST always be pinned by failing tests before fixing
+**MUST** — According to TDD principles, write tests before writing code.
 
-#### Platform tests over later
-
-**PREFER** — Pin assumptions by 'platform' or 'framework' tests over waiting until later.
-
-#### Risk assumptions in plan
-
-**PREFER** — Add a test assumptions section to any plan with risk.
