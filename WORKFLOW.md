@@ -8,9 +8,9 @@ Same RFC 2119 priority markers and the same anchor convention as [`RULES.md`](./
 
 ### 1. Git Hygiene
 
-#### No refactor and feature mix
+#### Clean code refactors separately from features
 
-**SHOULD NOT** — Mix refactoring with new features on the same branch.
+**SHOULD** — Separate code quality refactors (i.e., Boy Scout Rule) from a new feature on a different branch (boy-scout-branch). Then it can be merged before the feature branch so that work is not wasted if the feature is abandoned. It also makes feature review smaller.
 
 #### No mixed feature branches
 
@@ -42,6 +42,17 @@ Same RFC 2119 priority markers and the same anchor convention as [`RULES.md`](./
 #### Merge related over post-split
 
 **PREFER** — Merge related branches instead of post-splitting work.
+
+#### Describe why in PR description
+
+**MUST** Describe **business** purpose and motivation for the change max 10 on point sentences so that reviewers have context clear
+**MUST NOT** Contain information that belongs in README.md, docs/plans or docs/adrs but **should** reference such documents
+**MUST NOT** Contain attribution
+
+#### PR title should contain what
+
+**MUST** Describe technical contents of the PR so that developers can sort and organize them
+**MUST NOT** Be prefixed with chore or feat
 
 ### 2. Evidence and TDD
 

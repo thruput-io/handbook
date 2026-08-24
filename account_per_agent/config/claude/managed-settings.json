@@ -1,0 +1,64 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-settings.json",
+  "env": {
+    "DISABLE_UPDATES": "1"
+  },
+  "additionalDirectories": [
+    "//Users/Shared/workspace"
+  ],
+  "allowManagedMcpServersOnly": false,
+  "apiKeyHelper": "/usr/local/bin/get-agent-key.sh",
+  "workflowSizeGuideline": 20,
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "disableBypassPermissionsMode": "disable",
+    "allow": [
+      "AskUserQuestion",
+      "Agent",
+      "Read(//Users/Shared/admin_repo/**)",
+      "Edit(//Users/Shared/workspace/**)",
+      "WebFetch",
+      "WebSearch",
+      "Bash(git *)",
+      "Bash(ls *)",
+      "Bash(az devops login *)",
+      "Bash(az devops *)",
+      "Bash(az pipelines *)",
+      "Bash(az boards *)",
+      "Bash(az repos *)",
+      "Bash(cat *)",
+      "Bash(echo *)",
+      "Bash(curl *)",
+      "Bash(base64 *)",
+      "Bash(mkdir *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(make *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(mv *)",
+      "Bash(cp *)",
+      "Bash(dotnet *)",
+      "Bash(touch *)",
+      "Bash(rm *)"
+    ],
+    "deny": [
+      "Bash(rm -rf \\*)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf .)",
+      "Bash(rm -rf ..)",
+      "Bash(sudo *)",
+      "Bash(su *)",
+      "Bash(chmod *)",
+      "Bash(git reset --hard *)",
+      "Edit(//Users/Shared/admin_repo/**)",
+      "Edit(//Library/Application Support/ClaudeCode/**)"
+    ]
+  }
+}
