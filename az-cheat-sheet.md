@@ -1,6 +1,6 @@
 # AZ CHEAT SHEET
 
-Exact `az` invocations for reviewing an **Azure DevOps** pull request. Counterpart to [`gh-cheat-sheet.md`](./gh-cheat-sheet.md): syntax only, no rules. [`CODE_REVIEW.md`](./CODE_REVIEW.md) owns the rules; where a command here would contradict them, the rule wins.
+Exact `az` invocations for reviewing an **Azure DevOps** pull request. Counterpart to [`gh-cheat-sheet.md`](./gh-cheat-sheet.md): syntax only, no rules. Referenced by [`CODE_REVIEW.md`](./CODE_REVIEW.md) and [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md), which own the rules; where a command here would contradict them, the rule wins.
 
 Requires the `azure-devops` extension (`az extension add --name azure-devops`).
 
