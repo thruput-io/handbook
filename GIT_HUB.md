@@ -14,14 +14,14 @@
    Every other spelling is refused before it executes. These are measured, not
    predicted, and retrying them wastes a turn:
 
-   | Form | Result |
-   |---|---|
-   | `GH_TOKEN=$(get-gh-token.sh) gh ...` | runs |
-   | `GH_TOKEN="$(get-gh-token.sh)" gh ...` | **refused** — the quotes stop the permission rule matching |
-   | `export GH_TOKEN="$(get-gh-token.sh)"` | **refused** — quoted or unquoted, `export` matches no rule |
-   | `export GH_TOKEN=...; gh ...` | **refused** — the `export` half is refused, so the whole command is |
-   | `git ... https://x-access-token:$(get-gh-token.sh)@github.com/...` | **refused** — a token embedded in a URL |
-   | `GH_TOKEN=$(get-gh-token.sh) git ...` | **refused** — the rule covers `gh`, not `git` |
+   | Form                                                               | Result                                                              |
+   |--------------------------------------------------------------------|---------------------------------------------------------------------|
+   | `GH_TOKEN=$(get-gh-token.sh) gh ...`                               | runs                                                                |
+   | `GH_TOKEN="$(get-gh-token.sh)" gh ...`                             | **refused** — the quotes stop the permission rule matching          |
+   | `export GH_TOKEN="$(get-gh-token.sh)"`                             | **refused** — quoted or unquoted, `export` matches no rule          |
+   | `export GH_TOKEN=...; gh ...`                                      | **refused** — the `export` half is refused, so the whole command is |
+   | `git ... https://x-access-token:$(get-gh-token.sh)@github.com/...` | **refused** — a token embedded in a URL                             |
+   | `GH_TOKEN=$(get-gh-token.sh) git ...`                              | **refused** — the rule covers `gh`, not `git`                       |
 
    The token cannot be carried between commands. There is no exported variable
    and no session state: mint it again in each command that needs it. A token
@@ -30,7 +30,7 @@
 4. **Token properties.**
    - **Installation token (`ghs_...`).** A GitHub App Installation Access Token, not a user account token.
    - **User endpoints fail.** `GET /user`, `gh auth status`, and `gh auth login` fail with `403 Resource not accessible by integration`. Use repository-scoped commands.
-   - **`@me` fails.** `--assignee @me`, `--reviewer @me`, and `--web` fail the same way. Name a user or team explicitly, or omit the flag.
+   - **`@me` fails.** `--assignee @me`, `--reviewer @me`, and `--web` fail the same way. Name a user or team explicitly or omit the flag.
    - **One hour.** Tokens expire after 60 minutes. Never store one.
 
 5. **Sample invocations.**

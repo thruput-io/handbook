@@ -65,6 +65,20 @@ which is why it lives here and not in the ruleset: no tool reports "this was slo
 are its symptoms, and those are rules — [Fail fast over fallback](./RULES.md#fail-fast-over-fallback),
 [Illegal states are unrepresentable](./RULES.md#illegal-states-are-unrepresentable), and the rest.
 
+## Why a comment is not the place
+
+A comment is not testable, and nothing binds it to the code it sits beside. When the two disagree no
+build fails and no test goes red, so the reader is left holding two sources of truth with no way to tell
+which one is current. Code is written to be read; a comment explaining what the code says is an
+admission that the code does not say it, and the repair belongs in the code. It is the carpenter tacking
+a note to the wall — "here is where I should have put a nail", "there should really be a foundation
+here", or best of all "not sure if this wall is needed, but I added it anyway".
+
+None of which makes the information worthless. It makes the comment the wrong container: what was worth
+writing down is worth putting where a maintainer already knows to look — in a name, a failing test, a
+plan, a decision record, a README. [No comments in code](./RULES.md#no-comments-in-code) is the rule,
+and the destinations are listed with it.
+
 ## Excuses that don't apply
 
 These principles hold even when it feels like they shouldn't. None of the following is valid grounds for
