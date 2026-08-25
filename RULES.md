@@ -354,6 +354,21 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 **PREFER** — Ask for guidance on how to solve tricky linting rules instead of 'hacking' it.
 
+### 12. Shift Left
+
+Every rung below is a mechanism for stopping the same bug. The further left it is caught, the cheaper and more certain the catch: the leftmost rung makes the bad state impossible to hold, the rightmost only observes the failure once deployed.
+
+**LEFT** — earliest, cheapest, most certain → **RIGHT** — latest, costliest, least certain
+
+| 1. Illegal states unrepresentable                                                                                                                                                         | 2. Static code analysis                                                  | 3. Unit tests                                                       | 4. Integration tests                                                                                      | 5. E2E tests                                                                     |
+|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|---------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| No illegal value can be held: the type system rejects what it can, and construction closes the rest — validating factories, required parameters, no public path to an unchecked instance. | Compiler, type checker, and linter reject the code before anything runs. | One component's behaviour, in process, with no external dependency. | Components exercised together against real adapters (database, broker, filesystem), in a single test run. | Deployed containers exercised in a running environment, from outside the system. |
+
+#### Shift Left
+
+**MUST** — Place a safeguard at the leftmost rung that can catch the error, and descend only when the rung above cannot.
+
+
 ---
 
 See [`PHILOSOPHY.md`](./PHILOSOPHY.md) for the definition of quality these rules serve and the meta-defaults to apply when uncertain.

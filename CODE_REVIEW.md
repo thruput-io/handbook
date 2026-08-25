@@ -11,6 +11,7 @@ Procedural checklist for reviewing pull requests. Serves the rules in [`RULES.md
 - **git-tool** — the CLI for the host the PR lives on: `gh` for GitHub, or `az` with the `azure-devops` extension for Azure DevOps (`dev.azure.com`). Pick it from the PR URL. Every command and payload this workflow needs is in the matching [`gh-cheat-sheet.md`](./gh-cheat-sheet.md) or [`az-cheat-sheet.md`](./az-cheat-sheet.md), referred to below as `{git-tool}-cheat-sheet.md`.
 - **head commit** — the commit the review is anchored to: `headRefOid` on GitHub, `lastMergeSourceCommit.commitId` on Azure DevOps. Every file read and every inline comment resolves against it.
 - **change set** — the lines this PR adds or removes at the head commit.
+- **checkout** — if the working directory is the repository, checkout, otherwise new checkout.
 - **surface** — the code a violation may be reported against. On a first-time review the surface is the change set. On a subsequent review it is narrowed as [Subsequent Reviews](#subsequent-reviews) sets out.
 - **full context** — the surface plus the reading in [step 1](#1-setup): every changed file in full, the call sites of changed public symbols, and the covering test files. Context is what a verdict is *reached from*, never what a verdict is reported *against*.
 
@@ -66,7 +67,7 @@ The git-tool must be available.
 
 Fetch the PR overview, the changed files, and the existing review comments — the last so this review does not duplicate a comment already on the PR. On Azure DevOps, filter the system-generated threads out of that comparison; counting them as review comments corrupts the check.
 
-Extract the head commit from the overview response — inline comments are posted against it. Do **not** guess it; do **not** use `HEAD` of the local checkout.
+Extract the head commit and the PR description from the overview response — inline comments are posted against the head commit, and the description is handed to every probe in [step 3](#3-rule-evaluation), so it is fetched once here rather than once per subagent. Do **not** guess the head commit; do **not** use `HEAD` of the local checkout.
 
 **Read beyond the change set.** Hunks are not enough to evaluate most of [`RULES.md`](./RULES.md) — dead code, layering, primitive leakage, missing tests, and unrepresentable illegal states are all invisible in isolated hunks. Before probing, obtain at the head commit:
 
@@ -112,7 +113,7 @@ A probe on one of these that examined only the change set has not run. Its `exam
 
 Enumerate every rule (`####` in [`RULES.md`](./RULES.md)) first; that enumeration is the probe list, and its length is the number of subagents to dispatch. Launch them concurrently.
 
-Only the reviewing context talks to the PR host. Subagents read; they never post, resolve threads, or submit.
+Only the reviewing context talks to the PR host. Subagents read; they never post, resolve threads, or submit — and they never fetch PR metadata: the description, the changed-file list, the head commit, and the surface are resolved here and handed to them.
 
 **A probe reads the repository under review and its own instructions — nothing else on the host filesystem.** On disk that is the local checkout of this PR, or the files fetched at the head commit where there is none. The instructions are a closed set: the rule at its source URL, the documents that source links for the rule, and `{git-tool}-cheat-sheet.md`. Other checkouts, agent configuration, and the rest of the reviewer's home directory are out of scope; a probe that needed something there records that in `examined` rather than reading it. The ladder searches in the table above are unaffected, because none of them is a read of the host filesystem: they query the package registry, callable services, and the published documentation for the platform and framework on the web. Platform and framework capability is established from those published docs at the version this project pins — never from a local install tree, and never from memory of the framework.
 

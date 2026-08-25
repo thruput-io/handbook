@@ -4,7 +4,7 @@ This is the root document every agent loads automatically, installed as `~/.gemi
 Gemini agents and as `~/.claude/CLAUDE.md` for Claude agents. It governs how you operate; the
 documents it points to govern what you produce.
 
-Resolve the symlink this file is sourced from, and use the resulting path as `<config>`.
+Resolve the symbolic file system link this file is sourced from (if any), and use the resulting path as `<config>`.
 
 ## 1. Always Prioritized Follow Rules
 

@@ -4,14 +4,14 @@ The skeleton mandated by [`PLANNING.md`](./PLANNING.md#plan-format). Copy it to
 `docs/plans/{plan-name}/{NNN}-{plan-name}.md` in the target project and fill it in. Delete this
 paragraph and replace every `{placeholder}`.
 
-| | |
-|---|---|
-| Plan | `docs/plans/{plan-name}/{NNN}-{plan-name}.md` |
-| Branch | `{NNN}-{plan-name}` |
-| Started | {YYYY-MM-DD} |
-| Supersedes | {link to the previous numbered plan, or `—`} |
-| ADRs consulted | {list, or `none found`} |
-| Status | draft \| complete |
+|                |                                               |
+|----------------|-----------------------------------------------|
+| Plan           | `docs/plans/{plan-name}/{NNN}-{plan-name}.md` |
+| Branch         | `{NNN}-{plan-name}`                           |
+| Started        | {YYYY-MM-DD}                                  |
+| Supersedes     | {link to the previous numbered plan, or `—`}  |
+| ADRs consulted | {list, or `none found`}                       |
+| Status         | draft \| complete                             |
 
 ## Implementing Agent Instructions
 
