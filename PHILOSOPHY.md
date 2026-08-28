@@ -7,43 +7,52 @@ Nothing here is a rule. There are no RFC 2119 markers in this file on purpose �
 violated belongs in [`RULES.md`](./RULES.md). What is here is the reasoning those rules serve, and the
 default to fall back on when no rule decides the question.
 
-## When uncertain
-
-Default to strict domain modeling over ad-hoc structures, to stronger typing over weaker, and to
-architectural discipline over brevity. Each of these is already required —
-[Strict domain modeling](./RULES.md#strict-domain-modeling),
-[Strong typing](./RULES.md#strong-typing),
-[Separation over brevity](./RULES.md#separation-over-brevity) — so the point of naming them here is the
-direction to lean when a case is not covered: the stricter reading of an unclear situation is the right
-one.
-
 ## Software quality — what it is
 
 Software quality is ALWAYS the highest priority. There is NO SITUATION that justifies lowering quality in
 favor of other goals, because ALL OTHER OBJECTIVES become harder to reach once it drops. The three
-objectives most often offered as justification are faster development, higher performance, and new
+goals most often offered as justification are faster development, higher performance, and new
 features. None of them qualify.
 
 ## How quality is measured
 
 These are the terms to use when arguing about quality. They name the axes a change can be good or bad
 along, so a review can say *which* kind of worse something is. They characterize a problem; they do not
-settle it — the requirement being violated comes from [`RULES.md`](./RULES.md).
+settle it.
 
 - **Correctness** — the software does what our users want it to do.
-- **Maintainability** — changing one behaviour requires understanding and touching only the code that owns it.
+- **Maintainability** — changing one behavior requires understanding and touching only the code that owns it.
 - **Readability** — a reader unfamiliar with the code can say what it does, and why, without asking its author.
-- **Testability** — behaviour can be exercised in isolation, without standing up the network, the clock, or global state.
+- **Testability** — behavior can be exercised in isolation, without standing up the network, the clock, or global state.
 - **Simplicity** — the design carries no structure that a present requirement does not demand.
-- **True test coverage** — tests that fail when the behaviour breaks, as opposed to tests that merely execute the lines.
+- **True test coverage** — tests that fail when the behavior breaks, as opposed to tests that merely execute the lines.
 - **Ease of doing the right thing** — the correct approach is also the path of least resistance for the next contributor.
 - **Guardrails against doing the wrong thing** — types, tests, and tooling make the wrong approach fail early, rather than merely discouraging it.
 - **Automation** — how much of the distance between a change and its verified deployment runs without a human.
 - **Currency of tools and libraries** — how current they are, and how easily they can be kept that way.
 
-Simplicity and guardrails will sometimes point opposite ways, because a guardrail is structure that no
+Simplicity and guardrails will sometimes point opposite ways, because a guardrail is a structure that no
 *functional* requirement demands. Resolve it in favor of the guardrail: the wrong approach failing early
 is itself something we require, and so it counts as a present requirement.
+
+### What wins when values collide
+
+Each axis above is commonly challenged by a competing value. When they collide, this is what wins:
+
+- **Correctness** — Correct over Extensive
+- **Maintainability** — Maintainable over Performant
+- **Readability** — Readable over Commented
+- **Testability** — Testable over Clickable
+- **Simplicity** — Simple over Popular
+- **True test coverage** — Competence over Measurable
+- **Ease of doing the right thing** — Open Closed over Optimal
+- **Guardrails against doing the wrong thing** — Build-Checks over Rule Document
+- **Automation** — Pipelines over Platform Documents
+- **Currency of tools and libraries** — Small and manageable over Feature Rich
+
+The pairs read in both directions: finding the latter in code is an alarm, a symptom that something
+should be done about the former. The repair belongs on the left side of the pair, not in more of the
+right.
 
 ## How quality is NOT measured
 
@@ -56,28 +65,9 @@ and a release does not become good by containing more.
 
 ## How quality is achieved
 
-By always striving for strictness over sloppiness. By failing fast over using fallbacks. By following
-best practices and standards. By making all our code testable and tested. By making illegal states
-unrepresentable.
-
-Strictness is the thread through all of them. It is also the one that cannot be checked mechanically,
+Strictness is the thread through all of them. It is also the one that cannot be checked mechanically
 which is why it lives here and not in the ruleset: no tool reports "this was sloppy". What tools report
-are its symptoms, and those are rules — [Fail fast over fallback](./RULES.md#fail-fast-over-fallback),
-[Illegal states are unrepresentable](./RULES.md#illegal-states-are-unrepresentable), and the rest.
-
-## Why a comment is not the place
-
-A comment is not testable, and nothing binds it to the code it sits beside. When the two disagree no
-build fails and no test goes red, so the reader is left holding two sources of truth with no way to tell
-which one is current. Code is written to be read; a comment explaining what the code says is an
-admission that the code does not say it, and the repair belongs in the code. It is the carpenter tacking
-a note to the wall — "here is where I should have put a nail", "there should really be a foundation
-here", or best of all "not sure if this wall is needed, but I added it anyway".
-
-None of which makes the information worthless. It makes the comment the wrong container: what was worth
-writing down is worth putting where a maintainer already knows to look — in a name, a failing test, a
-plan, a decision record, a README. [No comments in code](./RULES.md#no-comments-in-code) is the rule,
-and the destinations are listed with it.
+are its symptoms. WE can check for strictness by looking for its symptoms, and those are rules. 
 
 ## Excuses that don't apply
 
@@ -98,7 +88,7 @@ The fallacy is generalizing a habit onto a case that has not been shown to need 
 [`2>/dev/null`](./RULES.md#no-discarded-diagnostics) to a command whose failure matters;
 [catching an exception only to log it and continue](./RULES.md#no-silent-catch);
 [branching on the platform](./RULES.md#no-speculative-portability) when the task fixes the platform;
-[substituting a default](./RULES.md#no-default-to-satisfy-the-contract) when an input is missing instead of
+[substituting a default](./RULES.md#no-default-on-failure) when an input is missing instead of
 stopping. Each one converts a loud, diagnosable failure into a silent wrong answer, which is the opposite
 of failing fast. Add a safeguard when *this* path is shown to need it, and say what showed it.
 

@@ -124,3 +124,17 @@ General (non-inline) PR comment:
 ```bash
 gh pr comment <URL> --body '...'
 ```
+
+## Attach the ledger
+
+GitHub has no API for file attachments on pull requests or reviews — the REST API accepts only Markdown text bodies, and the web UI's drag-and-drop upload runs through a browser-session pipeline that rejects token auth. The ledger therefore travels **in the review body**, as a collapsed block appended to `review.json` before the single POST in [§ Submit one atomic review](#submit-one-atomic-review):
+
+```bash
+jq --rawfile ledger ledger.md \
+  '.body += "\n\n<details>\n<summary>Review ledger</summary>\n\n" + $ledger + "\n\n</details>"' \
+  review.json > review-with-ledger.json
+```
+
+- The blank lines around the ledger inside `<details>` are required — without them GitHub renders the table as literal text.
+- The verdict stays on top; the ledger unfolds on demand.
+- Do **not** post the ledger as a separate PR comment — it belongs to the review submission, and a separate comment is a second notification.

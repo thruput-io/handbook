@@ -138,6 +138,26 @@ az devops invoke --area git --resource pullRequestThreads \
 
 Update a thread's status — the resolve/unresolve equivalent — with `--http-method PATCH`, route parameter `threadId={threadId}`, and body `{"status": "fixed"}` or `{"status": "active"}`.
 
+## Attach the ledger
+
+Azure DevOps attaches files to a pull request as a first-class resource — [Pull Request Attachments § Create, api-version 7.1](https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-attachments/create?view=azure-devops-rest-7.1). The request body is the raw file as `application/octet-stream` rather than the JSON `az devops invoke` sends, so this one call goes over plain REST with the same PAT:
+
+```bash
+curl -sS --fail -X POST \
+  -u ":$AZURE_DEVOPS_EXT_PAT" \
+  -H "Content-Type: application/octet-stream" \
+  --data-binary @ledger.md \
+  "{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{id}/attachments/ledger.md?api-version=7.1"
+```
+
+The response is the attachment metadata; its `url` field is the download link. An attachment is not visible in the PR timeline on its own — link it from the PR-level summary thread (a thread without `threadContext`, [§ Post an inline comment thread](#post-an-inline-comment-thread)):
+
+```
+[Review ledger]({url from the response})
+```
+
+Upload the attachment and post its linking thread with the other pre-vote posts — see [§ No atomic review](#no-atomic-review).
+
 ## Vote
 
 ```bash
@@ -160,4 +180,4 @@ Consequences for a review run against Azure DevOps:
 
 Every read command above was executed against a live PR (`NavistarCollection/NavistarProduction`, PR 51964) and returned the documented shape.
 
-The writing paths — thread POST, thread PATCH, `set-vote` — are documented from the REST API and were **not** executed, to avoid posting to a real pull request. Confirm the payload against a scratch PR before trusting it.
+The writing paths — thread POST, thread PATCH, `set-vote`, and the attachment upload — are documented from the REST API and were **not** executed, to avoid posting to a real pull request. Confirm the payload against a scratch PR before trusting it.
