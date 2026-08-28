@@ -222,7 +222,7 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 - Add a failing test pinning the weakness. That is how the reminder is left, and it is why the code cannot be merged — see [`WORKFLOW.md § Tests before code`](./WORKFLOW.md#tests-before-code).
 - Split the PR into smaller PRs, each production-ready and needing no further work once merged.
-- Write a plan document — see [`PLANNING.md`](./PLANNING.md).
+- Write a plan document, it can start with just branch name and an idea, it does not need to completed — see [`PLANNING.md`](./PLANNING.md).
 
 ##### Architectural and design decision
 
@@ -356,13 +356,13 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 ### 12. Shift Left
 
-Every rung below is a mechanism for stopping the same bug. The further left it is caught, the cheaper and more certain the catch: the leftmost rung makes the bad state impossible to hold, the rightmost only observes the failure once deployed.
+Every rung below is a mechanism for stopping the same bug or validate data. The further left it is caught, the cheaper and more certain the catch: the leftmost rung makes the bad state impossible to hold, the rightmost only observes the failure once deployed.
 
 **LEFT** — earliest, cheapest, most certain → **RIGHT** — latest, costliest, least certain
 
-| 1. Illegal states unrepresentable                                                                                                                                                         | 2. Static code analysis                                                  | 3. Unit tests                                                       | 4. Integration tests                                                                                      | 5. E2E tests                                                                     |
-|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|---------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| No illegal value can be held: the type system rejects what it can, and construction closes the rest — validating factories, required parameters, no public path to an unchecked instance. | Compiler, type checker, and linter reject the code before anything runs. | One component's behaviour, in process, with no external dependency. | Components exercised together against real adapters (database, broker, filesystem), in a single test run. | Deployed containers exercised in a running environment, from outside the system. |
+| 1. Illegal states unrepresentable                                                                                                                                                                                                   | 2. Static code analysis                                                  | 3. Unit tests                                                       | 4. Integration tests                                                                                                    | 5. E2E tests                                                                     |
+|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|---------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| No illegal value can be held: the type system rejects what it can, and construction closes the rest — no code at all, immutable, strong typing, validating factories, required parameters, no public path to an unchecked instance. | Compiler, type checker, and linter reject the code before anything runs. | One component's behaviour, in process, with no external dependency. | Components exercised together against real adapters (database, broker, filesystem) in containers, in a single test run. | Deployed containers exercised in a running environment, from outside the system. |
 
 #### Shift Left
 

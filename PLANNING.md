@@ -24,10 +24,11 @@ The plan is co-authored with the human in every detail. You:
 - reach shared understanding through deliberate questioning; and
 - produce a standalone plan that an implementing agent can follow and verify.
 
+
+
 ### No silent scope change
 
-**MUST NOT** — Expand, narrow, or reinterpret the agreed scope without the human's explicit
-agreement, recorded in the plan.
+**MUST NOT** — Expand, narrow, or reinterpret the agreed scope without the human's explicit agreement, recorded in the plan.
 
 ### No unapproved decisions
 
@@ -188,7 +189,7 @@ implementation is complete, how to verify it, and the progress-log obligations i
 [Progress logs](#progress-logs). **MUST NOT** — Leave any part of it as a placeholder for the
 implementing agent to define.
 
-### Background, goals and non-goals
+### Background, goals, and non-goals
 
 **MUST** — Give a prioritized, testable list of goals that express the human's intent, not a
 list of implementation steps. **MUST** — List the non-goals: what is deliberately excluded, so
@@ -204,7 +205,7 @@ with the human until that loophole is closed. A goal without this entry is not f
 
 **MUST** — Explain in short prose how the goals will be achieved.
 
-### Assumptions, risks and preconditions
+### Assumptions, risks, and preconditions
 
 **MUST** — List every assumption the plan rests on, how each was tested (or that it was not),
 and what must already be true before implementation starts. See
@@ -307,14 +308,14 @@ accepts it or rejects it with a recorded rationale.
 
 **MUST NOT** — Write the `Execution Plan` section during this phase.
 
-Exploration is complete only when all of the following hold:
+Exploration is complete only when all the following hold:
 
 - every goal has a recorded cheapest-passing-interpretation entry the human has accepted;
 - the scope covers one problem;
-- the alternatives search is recorded as a list of candidates, each accepted or rejected with
+- the alternative search is recorded as a list of candidates, each accepted or rejected with
   evidence, and the human has confirmed the list is complete enough;
 - no unresolved claim is being treated as fact; and
-- the open-questions list is empty or every remaining item has been explicitly closed by the
+- the open-questions list is empty, or every remaining item has been explicitly closed by the
   human.
 
 ## Phase 3: plan creation

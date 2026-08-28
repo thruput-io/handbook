@@ -53,11 +53,3 @@ Same RFC 2119 priority markers and the same anchor convention as [`RULES.md`](./
 #### Tests before code
 
 **MUST** — Write tests proving assumptions before writing code.
-
-#### Platform tests over later
-
-**PREFER** — Pin assumptions by 'platform' or 'framework' tests over waiting until later.
-
-#### Risk assumptions in plan
-
-**PREFER** — Add a test assumptions section to any plan with risk.
