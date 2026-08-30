@@ -1,16 +1,20 @@
 # CODE REVIEW
 
-Procedural checklist for reviewing pull requests. Serves the rules in [`RULES.md`](./RULES.md) and the quality definition in [`PHILOSOPHY.md`](./PHILOSOPHY.md).
+Procedural detailed instructions for reviewing a pull request.
+
+Deviating from this skill is a critical failure. Do not improvise, summarize, or skip any part of this process.
+
+Serves the rules in [`RULES.md`](./RULES.md) and the quality definition in [`PHILOSOPHY.md`](./PHILOSOPHY.md).
 
 ## Definitions
 
 - **Subsection** — a `###`-level heading in [`RULES.md`](./RULES.md) (e.g., `### 1. Domain Modeling, Typing & Primitive obsession`). `### If in doubt` and `### If a task conflicts with these guidelines` govern how an agent behaves, not what the code does; they are not reviewable subsections.
 - **Rule** — a `####`-level heading in [`RULES.md`](./RULES.md).
-- **Principle** — a `##`-level section in [`PHILOSOPHY.md`](./PHILOSOPHY.md). Principles are not probed: they carry no enforceable requirement, so a probe against one could only return an unfalsifiable verdict. They supply the vocabulary for describing a finding, and the direction to lean when no rule decides the question.
 - **Review probe** — a focused attempt to find issues from exactly one rule
 - **git-tool** — the CLI for the host the PR lives on: `gh` for GitHub, or `az` with the `azure-devops` extension for Azure DevOps (`dev.azure.com`). Pick it from the PR URL. Every command and payload this workflow needs is in the matching [`gh-cheat-sheet.md`](./gh-cheat-sheet.md) or [`az-cheat-sheet.md`](./az-cheat-sheet.md), referred to below as `{git-tool}-cheat-sheet.md`.
 - **head commit** — the commit the review is anchored to: `headRefOid` on GitHub, `lastMergeSourceCommit.commitId` on Azure DevOps. Every file read and every inline comment resolves against it.
 - **change set** — the lines this PR adds or removes at the head commit.
+- **checkout** — if the working directory is the repository, checkout, otherwise new checkout.
 - **surface** — the code a violation may be reported against. On a first-time review the surface is the change set. On a subsequent review it is narrowed as [Subsequent Reviews](#subsequent-reviews) sets out.
 - **full context** — the surface plus the reading in [step 1](#1-setup): every changed file in full, the call sites of changed public symbols, and the covering test files. Context is what a verdict is *reached from*, never what a verdict is reported *against*.
 
@@ -20,11 +24,11 @@ Procedural checklist for reviewing pull requests. Serves the rules in [`RULES.md
 
 A probe is complete only when it has produced one **ledger row**:
 
-| field      | content                                                                                                                                                               |
-|------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `rule`     | the rule probed, by heading text                                                                                                                                      |
-| `examined` | what was actually opened to reach the verdict — files, symbols, call sites, test files                                                                                |
-| `verdict`  | `violation` \| `clean` \| `not-applicable`                                                                                                                            |
+| field      | content                                                                                                                                                                                                                                                                             |
+|------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `rule`     | the rule probed, by heading text                                                                                                                                                                                                                                                    |
+| `examined` | what was actually opened to reach the verdict — files, symbols, call sites, test files                                                                                                                                                                                              |
+| `verdict`  | `violation` \| `clean` \| `not-applicable`                                                                                                                                                                                                                                          |
 | `evidence` | for `violation`: file and line, inside the surface — or, for code the surface made dead, the dead line plus the surface line that killed it. For `clean`: what was checked that would have exposed a violation. For `not-applicable`: why the rule cannot apply to the full context |
 
 A statement that a rule was considered is not a probe. A probe with an empty `examined` field is not a probe.
@@ -66,7 +70,7 @@ The git-tool must be available.
 
 Fetch the PR overview, the changed files, and the existing review comments — the last so this review does not duplicate a comment already on the PR. On Azure DevOps, filter the system-generated threads out of that comparison; counting them as review comments corrupts the check.
 
-Extract the head commit from the overview response — inline comments are posted against it. Do **not** guess it; do **not** use `HEAD` of the local checkout.
+Extract the head commit and the PR description from the overview response — inline comments are posted against the head commit, and the description is handed to every probe in [step 3](#3-rule-evaluation), so it is fetched once here rather than once per subagent. Do **not** guess the head commit; do **not** use `HEAD` of the local checkout.
 
 **Read beyond the change set.** Hunks are not enough to evaluate most of [`RULES.md`](./RULES.md) — dead code, layering, primitive leakage, missing tests, and unrepresentable illegal states are all invisible in isolated hunks. Before probing, obtain at the head commit:
 
@@ -97,7 +101,7 @@ This is the only path that skips the ledger.
 
 Probe every rule in [`RULES.md`](./RULES.md), partitioned by subsection. The pass runs to completion whatever it finds: a violation early does not end it, and neither does a run of `clean` verdicts.
 
-**Fan out one subagent per probe.** Each probe MUST run in its own subagent, dispatched with [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md) filled in. Do not probe several rules in one subagent, and do not probe rules in the reviewing context itself.
+**Fan out one subagent per reviewable subsection.** Each subsection MUST run in its own subagent, dispatched with [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md) filled in with the subsection's rules. The subagent runs one probe per rule on its list and returns one ledger row per probe — batching the dispatch does not merge the rows. Do not merge subsections into one subagent, do not drop a rule from a subsection's list, and do not probe rules in the reviewing context itself.
 
 **Some rules cannot be probed by reading the full context.** The ladder in [`RULES.md § 3. Simplicity`](./RULES.md#3-simplicity) asks whether this code needed to be written at all, and answering that takes a search rather than an inspection — a different search per rung:
 
@@ -110,25 +114,28 @@ Probe every rule in [`RULES.md`](./RULES.md), partitioned by subsection. The pas
 
 A probe on one of these that examined only the change set has not run. Its `examined` field MUST name the searches performed and the queries used, and a `clean` verdict MUST say what was searched for and not found. These are the probes most often skipped, because a negative result feels like no result — but an unsearched rung and an empty rung are different findings, and the `examined` field is the only thing that distinguishes them.
 
-Enumerate every rule (`####` in [`RULES.md`](./RULES.md)) first; that enumeration is the probe list, and its length is the number of subagents to dispatch. Launch them concurrently.
+The rungs are also ordered, and their verdicts are decided together by the subsection's subagent — the synthesis protocol is in [`PROBE_SUBAGENT_TEMPLATE.md` § Method](./PROBE_SUBAGENT_TEMPLATE.md). At most one rung comes back `violation` (the highest with a qualifying find); rungs above it are `clean`, rungs below it `not-applicable` pointing at the resolving rung. Those `not-applicable` rows are the protocol working, not hollow rows to re-run.
 
-Only the reviewing context talks to the PR host. Subagents read; they never post, resolve threads, or submit.
+Enumerate every rule (`####` under a reviewable subsection in [`RULES.md`](./RULES.md)) first; that enumeration is the probe list, and its length is the expected ledger row count. Group it by subsection — the number of reviewable subsections is the number of subagents to dispatch. Launch them concurrently.
+
+Only the reviewing context talks to the PR host. Subagents read; they never post, resolve threads, or submit — and they never fetch PR metadata: the description, the changed-file list, the head commit, and the surface are resolved here and handed to them.
 
 **A probe reads the repository under review and its own instructions — nothing else on the host filesystem.** On disk that is the local checkout of this PR, or the files fetched at the head commit where there is none. The instructions are a closed set: the rule at its source URL, the documents that source links for the rule, and `{git-tool}-cheat-sheet.md`. Other checkouts, agent configuration, and the rest of the reviewer's home directory are out of scope; a probe that needed something there records that in `examined` rather than reading it. The ladder searches in the table above are unaffected, because none of them is a read of the host filesystem: they query the package registry, callable services, and the published documentation for the platform and framework on the web. Platform and framework capability is established from those published docs at the version this project pins — never from a local install tree, and never from memory of the framework.
 
 Merge the returned rows into a single ledger, and the returned comments into the array built in [step 5](#5-draft-comments-locally). Fanned-out work that returns without ledger rows is not a result — re-run it.
 
-**Wait for every probe before moving on.** The probe list from the enumeration above is the expected row count: the ledger is complete only when it holds one row per dispatched subagent. Waiting is a hard barrier — do not draft comments and do not submit while any probe is still outstanding. A `violation` returned early does not end the pass and does not license an early submission; neither does a run of `clean` verdicts. The only path that submits without a complete ledger is [step 2](#2-pre-review-content-checks).
+**Wait for every probe before moving on.** The probe list from the enumeration above is the expected row count: the ledger is complete only when it holds one row per rule on that list. A subagent that returns fewer rows than its subsection has rules has not finished — re-run it for the missing rows. Waiting is a hard barrier — do not draft comments and do not submit while any probe is still outstanding. A `violation` returned early does not end the pass and does not license an early submission; neither does a run of `clean` verdicts. The only path that submits without a complete ledger is [step 2](#2-pre-review-content-checks).
 
 Submitting while probes are still running does not produce a partial review; it produces a wrong one. It reports a violation count the surface does not have, and it makes the rules whose subagents had not yet returned indistinguishable from rules that came back `clean`.
 
-### 4. Escalate When the Ledger Comes Back Clean
+### 4. Context Probing 
 
 If the ledger is complete and holds no `violation` rows, the review is not finished — probe further before approving:
 
 1. Consult [`references/agent-rules-books-INDEX.md`](https://github.com/thruput-io/handbook/blob/main/references/agent-rules-books-INDEX.md) — or the copy bundled with the tooling that invoked this review — and select the ruleset whose focus matches what this PR changes.
 2. The index is a pointer, not a ruleset. Fetch the selected ruleset at its `canonical_url` in [`ciembor/agent-rules-books`](https://github.com/ciembor/agent-rules-books) and read the actual rules. Do not probe from the index's one-line summary, or from memory of the book.
-3. Probe that ruleset the same way as [step 3](#3-rule-evaluation): one subagent per rule, [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md) filled in with the ruleset URL as `{{RULE_SOURCE_URL}}`. Add the returned rows to the same ledger.
+3. Pick 3 rules that are relevant to the PR's changes.
+4. Probe that ruleset the same way: one subagent, dispatched with [`PROBE_SUBAGENT_TEMPLATE.md`](./PROBE_SUBAGENT_TEMPLATE.md) filled in with the three picked rules as the rule list and the ruleset's `canonical_url` as their source. Add the returned rows to the same ledger.
 
 Approve only after this pass also comes back clean.
 
@@ -143,10 +150,11 @@ Two properties carry review meaning rather than syntax, and are decided here wha
 Each comment body:
 
 - Explains the violation. Keep it short.
-- MUST cite the violated rule as an absolute repo URL, so the link resolves outside this repo. Anchors are derived as described in [`RULES.md § Priority and precedence`](./RULES.md#priority-and-precedence). Example: `[No suppressed exit status](https://github.com/thruput-io/handbook/blob/main/RULES.md#no-suppressed-exit-status)`. A principle from [`PHILOSOPHY.md`](./PHILOSOPHY.md) MAY be named to characterize the violation, but it never stands in for the rule.
-- States what is wrong, not how to fix it. Do not hand the author a patch.
+- MUST cite the violated rule exactly as it appears in [`RULES.md`](./RULES.md).
+- States what is wrong, not how to fix it. 
+- Do not hand the author a patch if patch is not explicitly stated in Rules.
 
-The ledger stays local. It is the completeness record for the review, not review content.
+Write the completed ledger to a local Markdown file, `ledger.md` — the row table from [Probes](#probes), one row per probe. It is the completeness record of the review, not review content: no ledger rows in comment bodies. It is submitted with the review in [step 7](#7-submit) as an attachment — mechanism per host in `{git-tool}-cheat-sheet.md § Attach the ledger`.
 
 ### 6. Settle Existing Threads
 
@@ -159,10 +167,10 @@ Subsequent reviews only. List the threads and their state, then act per thread �
 
 Two gates, both checked before anything is posted:
 
-- **The ledger is whole.** It holds one row per probe on the list, and every row is filled. A missing row means a probe never returned and the review is unfinished, whatever the findings count.
+- **The ledger is whole.** It holds one row per probe on the list, and every row is filled. A missing row means a probe never returned, and the review is unfinished, whatever the findings count.
 - **Every `violation` row is in the payload.** Each one gets its inline comment — or its PR-level comment, where no single line is to blame — and the review body accounts for all of them. A violation that appears in the ledger but not in what is submitted has been found and then dropped, which is worse than not having probed for it — the author is told the surface is cleaner than the review actually established.
 
-Submit every comment from step 5 together with the verdict, anchored to the head commit. How atomic that can be depends on the host:
+Submit every comment from step 5 together with the verdict, anchored to the head commit. The ledger file from step 5 is part of the same submission — see `{git-tool}-cheat-sheet.md § Attach the ledger`: on Azure DevOps it is uploaded as a PR attachment and linked from the PR-level summary thread; GitHub has no attachment API, so there it travels in the review body as a collapsed `<details>` block. How atomic that can be depends on the host:
 
 - **GitHub** — one payload carries every inline comment plus the verdict, so submit exactly **one** review: one review, one notification, comments grouped. Do **not** post comments one at a time in a loop — that is N standalone comments, N notifications, and not atomic. See [`gh-cheat-sheet.md § Submit one atomic review`](./gh-cheat-sheet.md#submit-one-atomic-review).
-- **Azure DevOps** — no atomic endpoint exists. Each thread is its own request and the vote is a separate call, so N comments unavoidably mean N requests. Drafting locally in step 5 is what replaces atomicity: post every thread **before** casting the vote, so the verdict never lands ahead of its evidence, and on a retry reconcile against the existing threads rather than duplicating them. See [`az-cheat-sheet.md § No atomic review`](./az-cheat-sheet.md#no-atomic-review).
+- **Azure DevOps** — no atomic endpoint exists. Each thread is its own request, and the vote is a separate call, so N comments unavoidably mean N requests. Drafting locally in step 5 is what replaces atomicity: post every thread **before** casting the vote, so the verdict never lands ahead of its evidence, and on a retry reconcile against the existing threads rather than duplicating them. See [`az-cheat-sheet.md § No atomic review`](./az-cheat-sheet.md#no-atomic-review).

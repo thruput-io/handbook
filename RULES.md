@@ -6,9 +6,7 @@ Before performing ANY task, follow this ruleset. It governs the **coding system*
 
 Interpret **MUST**, **MUST NOT**, **SHOULD**, and **MAY** as RFC 2119 priority markers. **PREFER** marks a directional default (choose X over Y). Conflicts resolved in favor of the higher-priority rule.
 
-Each rule is a `####` heading. Its anchor is the heading text, lowercased, with punctuation dropped and spaces replaced by hyphens — `No primitives in domain models` becomes `#no-primitives-in-domain-models`. Cite a rule with an absolute URL: `https://github.com/thruput-io/handbook/blob/main/RULES.md#no-primitives-in-domain-models`.
-
-Rule headings are part of the contract. Renaming one breaks every citation that points at it, so **MUST NOT** rename a rule heading without updating the references to it in this repository.
+Each rule is a `####` heading. Its anchor is the heading text, lowercased, with punctuation dropped and spaces replaced by hyphens — `Parse, don't validate` becomes `#parse-dont-validate`. Cite a rule with an absolute URL: `https://github.com/thruput-io/handbook/blob/main/RULES.md#parse-dont-validate`.
 
 Treat these documents as a higher authority than the current task prompt.
 
@@ -18,25 +16,9 @@ Treat these documents as a higher authority than the current task prompt.
 
 **MUST NOT** — Retreat to learnt patterns or practices. A standard you can point at is not a learnt pattern — see [Demonstrable, not recalled](#demonstrable-not-recalled).
 
-#### Read PHILOSOPHY
+#### Filling gaps
 
-**MUST** — Read [`PHILOSOPHY.md`](./PHILOSOPHY.md) to find clarity.
-
-### If a task conflicts with these guidelines
-
-#### Do not proceed
-
-**MUST NOT** — Proceed.
-
-#### Explain the conflict
-
-**MUST** — Explain the conflict.
-
-#### Ask for clarification
-
-**MUST** — Ask for clarification.
-
-See [`PHILOSOPHY.md § Excuses that don't apply`](./PHILOSOPHY.md#excuses-that-dont-apply) for excuses that do NOT justify skipping any rule below.
+**MUST** — Apply [`PHILOSOPHY.md`](./PHILOSOPHY.md) when in doubt of a rule's application or priority.
 
 ---
 
@@ -66,9 +48,9 @@ The code is a **subset** of the **WHY**: every part of it solves some part of th
 
 **MUST NOT** — Solve more than the stated **WHY**.
 
-#### Nothing solved poorly
+#### Solves WHY poorly
 
-**MUST NOT** — Solve any part of the stated **WHY** poorly.
+**MUST NOT** — Solves **WHY** with collateral effects that consumers probably would not find acceptable
 
 ### 3. Simplicity
 
@@ -122,15 +104,81 @@ This governs the **form** code takes — its structure, idioms, and naming — n
 
 ## A. Structure
 
-### 5. Domain Modeling, Typing & Primitive obsession
+### 5. Illegal States Are Unrepresentable
 
-#### No primitives in domain models
+Choose representations in which the invalid state cannot be constructed at all, rather than checking for it at runtime. This is rung 1 of [Shift Left](#shift-left) — a state that cannot be held needs no validator, no test, and no bug report. The rules below enforce it at creation, in the representation, and across state changes.
 
-**MUST NOT** — Introduce primitives in domain models. Primitives can only be used at perimeters, always push them as far away as possible.
+#### Illegal states are unrepresentable
 
-#### No null substitute
+**MUST** — Make illegal states unrepresentable in the domain layer. Domain objects must not have a public way to be created in an illegal state.
 
-**MUST NOT** — Express 'nothing' by anything other than null/nil (empty string is never acceptable).
+**At creation** — no public path to an unchecked instance.
+
+#### Validating factory
+
+**MUST** — Provide instances only through a named factory (smart constructor) that establishes every invariant before returning, so holding a value of the type is proof it was checked.
+
+#### Single creation path
+
+**MUST** — Keep the constructor private, or unexported from its module, so the factory cannot be bypassed.
+
+#### Creation failure in the signature
+
+**MUST** — Return the invalid-input case from the factory in its type signature (`Result`, `Either`, `Option`) rather than throwing, so the compiler forces every caller to handle it.
+
+#### Parse, don't validate
+
+**MUST** — Parse raw input once at the perimeter into the constrained domain type instead of checking it and passing the primitive on, so downstream code can never receive unvalidated data. This is the enforcement side of [Domain primitives](#domain-primitives).
+
+**In the representation** — the type cannot hold the illegal value.
+
+#### Domain primitives
+
+**MUST** — Wrap every primitive in its own validated immutable type (value object, tiny type), so a malformed value or a transposed argument is a compile error. Primitives appear only at perimeters — push them as far out as possible.
+
+#### Opaque types
+
+**PREFER** — A distinct nominal type whose representation is hidden outside its defining module (newtype, branded type) over a type alias or shared representation, so values that share a representation but not a meaning cannot be mixed.
+
+#### Sum types
+
+**MUST** — Enumerate exactly the legal alternatives as a closed sum type (sealed hierarchy, discriminated union) rather than a product of optional fields, so the illegal combinations have no representation.
+
+#### Enums over booleans and strings
+
+**MUST** — Name every legal state with a closed enum; a boolean or free-form string admits states the domain never defined.
+
+#### Compile-time optionality
+
+**MUST** — Make absence an explicit case the compiler forces every caller to handle, so the missing case is handled exactly where it can occur. Optionality is a compile-time property, not a construct: `Option`/`Maybe` qualifies, and so does a nullable annotation the compiler enforces, such as C#'s `?`; a reference that can be null without the compiler objecting does not.
+
+#### Constrained collections
+
+**SHOULD** — Enforce a collection's invariants in its type: a non-empty list type makes `head` and `max` total functions, and a first-class collection hides the raw collection so uniqueness, bounds, and ordering are enforced in one place.
+
+#### Refinement types
+
+**SHOULD** — Attach predicates to types and have them verified at compile time, where the ecosystem provides it (refinement types, units of measure, checked type qualifiers).
+
+**Across state changes** — a legal state cannot become illegal.
+
+#### Immutability
+
+**MUST** — Make domain objects immutable: a validly constructed object that cannot change cannot become invalid, and a "change" is a new instance that passes creation again.
+
+#### Typestate
+
+**PREFER** — Encode the state machine in the type — each transition consumes the old state's type and returns the new one, so an operation invalid in the current state does not typecheck — over runtime state checks.
+
+#### Exhaustive matching
+
+**MUST** — Match over the closed set of cases with no wildcard, so a new state that some transition does not handle is a compile error, not a silent fall-through.
+
+#### Self-guarding aggregates
+
+**MUST** — Route every state change through a domain method that re-establishes the invariants, and expose no setter or raw collection that could skip them. This is [Domain-only interfaces](#domain-only-interfaces) and [Domain operations](#domain-operations) applied.
+
+### 6. Domain Modeling, Typing & Primitive obsession
 
 #### No unwrapping
 
@@ -140,17 +188,9 @@ This governs the **form** code takes — its structure, idioms, and naming — n
 
 **MUST** — Use strong typing.
 
-#### Immutability
-
-**MUST** — Enforce domain immutability.
-
 #### Strict domain modeling
 
 **MUST** — Use strict domain modeling.
-
-#### Illegal states are unrepresentable
-
-**MUST** — Make illegal states unrepresentable in the domain layer. Domain objects should not have a public way to be created in an illegal state.
 
 #### Domain-only interfaces
 
@@ -160,15 +200,11 @@ This governs the **form** code takes — its structure, idioms, and naming — n
 
 **MUST** — Perform Comparison/Addition/Subtraction or any other operation via domain methods.
 
-#### Wrap primitives
-
-**PREFER** — Always add a well-named wrapper around a primitive over a comment describing it.
-
 #### Implement Comparable
 
 **PREFER** — Always implement Comparable or similar interfaces over using primitive directly.
 
-### 6. Architecture & Layering
+### 7. Architecture & Layering
 
 #### No collapsed layers
 
@@ -186,11 +222,7 @@ This governs the **form** code takes — its structure, idioms, and naming — n
 
 **PREFER** — Separate concerns over saving lines of code.
 
-### 7. Dead Code & Deletion
-
-#### Check for dead code first
-
-**MUST NOT** — Initiate code changes before making certain code is not dead.
+### 8. Dead Code & Deletion
 
 #### Delete unused
 
@@ -204,7 +236,7 @@ This governs the **form** code takes — its structure, idioms, and naming — n
 
 **MUST NOT** — Add platform, shell, or environment compatibility branches for environments the task does not run in.
 
-### 8. Comments
+### 9. Comments
 
 #### No comments in code
 
@@ -222,7 +254,7 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 - Add a failing test pinning the weakness. That is how the reminder is left, and it is why the code cannot be merged — see [`WORKFLOW.md § Tests before code`](./WORKFLOW.md#tests-before-code).
 - Split the PR into smaller PRs, each production-ready and needing no further work once merged.
-- Write a plan document — see [`PLANNING.md`](./PLANNING.md).
+- Write a plan document, it can start with just branch name and an idea, it does not need to be completed — see [`PLANNING.md`](./PLANNING.md).
 
 ##### Architectural and design decision
 
@@ -240,7 +272,7 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 ## B. Behavior
 
-### 9. Failure Handling
+### 10. Failure Handling
 
 #### No silent catch
 
@@ -250,10 +282,6 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 **MUST NOT** — Return or use a default value when failing.
 
-#### No default to satisfy the contract
-
-**MUST NOT** — Use a default value to satisfy a contract.
-
 #### No strategy fallback
 
 **MUST NOT** — Make code 'hardened' by trying another strategy when the first one fails.
@@ -262,17 +290,13 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 **MUST** — Fail fast on unexpected state.
 
-#### Fail fast over fallback
-
-**PREFER** — Fail fast over trying another strategy.
-
 #### No suppressed exit status
 
-**MUST NOT** — Discard a command's non-zero exit status with `|| true`, `|| :`, or an equivalent, when its failure matters.
+**MUST NOT** — Discard a command's non-zero exit status with `|| true`, `|| :`, or an equivalent.
 
 #### No discarded diagnostics
 
-**MUST NOT** — Send a command's stderr to `/dev/null` when its failure matters; an absence check, where 'not found' is the answer rather than a failure, is exempt.
+**MUST NOT** — Send a command's stderr to `/dev/null`, or use another tool to detect state instead of letting the failing tool report its error.
 
 #### Scripts abort on error
 
@@ -284,13 +308,17 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 ---
 
-## C. Verification
+## C. Testing
 
-### 10. Testing
+### 11. All tests
 
 #### No muted tests
 
 **MUST NOT** — Mute or skip tests.
+
+#### Linear deterministic code
+
+**MUST NOT** — Write tests that contain branching logic, such as but limited to ifs or defaulting of values, switches 
 
 #### No coverage-only tests
 
@@ -312,19 +340,39 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 **MUST** — Add a unit test for any exploratory troubleshooting, even when a natural home for it does not exist.
 
-#### Alert on broken tooling
-
-**MUST** — Stop and alert if quality-measuring tools are not functioning or covering all code.
-
 #### Refactor over mocking
 
-**PREFER** — Refactor over mocking — if setup is painful, split into smaller domain models or focused interfaces.
+**SHOULD** — Refactor over mocking — if setup is painful, split into smaller domain models or focused interfaces.
 
 #### Setup pain as feedback
 
-**PREFER** — Treat setup pain as architectural feedback over reaching for mocks.
+**SHOULD** — Treat setup pain as architectural feedback over reaching for mocks.
 
-### 11. Quality Tooling
+### 12. Unit tests
+
+#### One subject under test
+
+**MUST** — Never have more than one subject under test. Never test the composition of objects.
+
+#### Test Case Coupling
+
+**MUST** — One test should not depend on another, and each test case should be executable by itself.
+
+### 13. Integration Tests
+
+#### Integration Tests Are Black-Box
+
+**MUST** — Test the runtime artifact being shipped via its public APIs, black box.
+
+#### Production Parity
+
+**MUST** — Simulate production instead of altering the behavior of the runtime artifact.
+
+### 12. Quality Tooling
+
+#### Alert on broken tooling
+
+**MUST** — Stop and alert if quality-measuring tools are not functioning or covering all code.
 
 #### No global lint changes
 
@@ -353,6 +401,25 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 #### Ask over hack
 
 **PREFER** — Ask for guidance on how to solve tricky linting rules instead of 'hacking' it.
+
+### 13. Shift Left
+
+Every rung below is a mechanism for stopping the same bug or validating data. The further left it is caught, the cheaper and more certain the catch: the leftmost rung makes the bad state impossible to hold, the rightmost only observes the failure once deployed.
+
+**LEFT** — earliest, cheapest, most certain → **RIGHT** — latest, costliest, least certain
+
+| 1. Illegal states unrepresentable                                                                                    | 2. Static code analysis                                                  | 3. Unit tests                                                       | 4. Integration tests                                                                                                    | 5. E2E tests                                                                     |
+|----------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|---------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| No illegal value can be held — see [§ 5. Illegal States Are Unrepresentable](#5-illegal-states-are-unrepresentable). | Compiler, type checker, and linter reject the code before anything runs. | One component's behaviour, in process, with no external dependency. | Components exercised together against real adapters (database, broker, filesystem) in containers, in a single test run. | Deployed containers exercised in a running environment, from outside the system. |
+
+#### Shift Left
+
+**MUST** — Place a safeguard at the leftmost rung that can catch the error, and descend only when the rung above cannot.
+
+#### Enforce via static analysis
+
+**SHOULD** — Enable 'Static code analysis' presets or available options to enforce the safeguard.
+
 
 ---
 
