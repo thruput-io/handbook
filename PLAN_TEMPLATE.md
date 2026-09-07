@@ -11,6 +11,7 @@ paragraph and replace every `{placeholder}`.
 | Started        | {YYYY-MM-DD}                                  |
 | Supersedes     | {link to the previous numbered plan, or `—`}  |
 | ADRs consulted | {list, or `none found`}                       |
+| ADRs added     | {list, or `—`}                                |
 | Status         | draft \| complete                             |
 
 ## Implementing Agent Instructions
@@ -66,9 +67,9 @@ Prioritized and testable. Each states intent, not implementation steps.
 For each goal: the cheapest implementation that would technically satisfy the wording while
 missing the intent, and how the wording rules it out.
 
-| Goal | Cheapest way to "pass" while missing the point | How the goal excludes it |
-|---|---|---|
-| 1 | {…} | {…} |
+| Goal | Cheapest way to "pass" while missing the point | How the goal excludes it | Accepted by |
+|---|---|---|---|
+| 1 | {…} | {…} | [D{n}](#discussions) |
 
 ### Non-goals
 
@@ -107,22 +108,32 @@ Negative findings and abandoned approaches belong here too, not only the success
 
 ### Rejected alternatives
 
-| Alternative | Evidence gathered | Why rejected |
-|---|---|---|
-| {…} | {…} | {…} |
+| Alternative | Evidence gathered | Why rejected | Decision |
+|---|---|---|---|
+| {…} | {…} | {…} | [D{n}](#discussions) |
 
 ## Discussions
 
-Every non-trivial decision, with the reasoning behind it and the human's rationale where the
-call was theirs. ADR conflicts found during preflight go here.
+The decision register: one row per non-trivial decision, in the order the decisions were taken.
+ADR conflicts found during preflight, and every ADR added during planning, are rows here too.
 
-- **{Decision}** — {rationale, who decided, date}
+`Question` and `Answer` quote the exchange verbatim — the question exactly as it was put to the
+human, and their reply in their own words. A paraphrase, a summary, or "agreed" is not a record.
+Where the call was the agent's, `Decided by` says so and `Answer` quotes the human's approval of
+it.
+
+| # | Decision | Question put to the human | Answer (verbatim) | Decided by | Rationale | Date |
+|---|---|---|---|---|---|---|
+| D1 | {what was decided} | "{the question, as asked}" | "{their reply, in their words}" | human \| agent, human approved | {why this, and what it rules out} | {YYYY-MM-DD} |
 
 ## Open questions
 
-Empty at completion, or every remaining item explicitly closed by the human.
+Empty at completion, or every remaining item explicitly closed by the human. A closure is a
+decision: it gets a [Discussions](#discussions) row quoting the question and the human's answer,
+and the item links to it.
 
 - [ ] {Question}
+- [x] {Question} — closed by the human, [D{n}](#discussions)
 
 ## Execution Plan
 

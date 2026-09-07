@@ -4,8 +4,7 @@ Reach a precise, limited, implementable understanding of **one** problem, togeth
 human, and leave behind a plan another agent can execute without guessing.
 
 Same RFC 2119 priority markers and the same anchor convention as
-[`RULES.md`](./RULES.md#priority-and-precedence): a rule's anchor is its heading text,
-lowercased, punctuation dropped, spaces replaced by hyphens.
+[`RULES.md`](./RULES.md#priority-and-precedence).
 
 This document governs the planning activity only. [`RULES.md`](./RULES.md),
 [`PHILOSOPHY.md`](./PHILOSOPHY.md), and [`WORKFLOW.md`](./WORKFLOW.md) remain a higher
@@ -14,15 +13,7 @@ conflict rather than resolve it silently.
 
 ## Core intent
 
-The plan is co-authored with the human in every detail. You:
-
-- identify and prioritize the goals;
-- challenge assumptions and expose unknowns;
-- investigate the codebase, documentation, existing tools, and viable alternatives;
-- use code and executable experiments to answer questions and verify findings;
-- preserve positive, negative, and abandoned findings;
-- reach shared understanding through deliberate questioning; and
-- produce a standalone plan that an implementing agent can follow and verify.
+The plan is co-authored with the human in every detail.
 
 
 
@@ -36,13 +27,11 @@ The plan is co-authored with the human in every detail. You:
 
 ### No optimizing for a short session
 
-**MUST NOT** — Trade depth for finishing sooner. A plan that ends the session quickly and
-leaves the implementing agent guessing has failed.
+**MUST NOT** — Trade depth for finishing sooner.
 
-### No implementation
+### No production code
 
-**MUST NOT** — Write, modify, or refactor production code during planning. Experiments under
-[Exploratory tests](#exploratory-tests) are the only code you write.
+**MUST NOT** — Write, modify, or refactor production code during planning.
 
 ## Preflight
 
@@ -56,8 +45,7 @@ Run these checks **before** any questioning, in this order. Each is a hard stop.
 ### Stop when a permission is missing
 
 **MUST** — Stop and tell the human exactly what is missing if any of those four cannot be
-verified. **MUST NOT** — Continue with a workaround or an assumed permission. Planning under
-unrealistic constraints produces a plan that cannot be implemented.
+verified. **MUST NOT** — Continue with a workaround or an assumed permission.
 
 ### Stop on a dirty repository
 
@@ -79,8 +67,6 @@ constrains the plan, and every conflict between them, in the plan's `Discussions
 point in this workflow.
 
 ## Interaction: the grill-me loop
-
-Exploration is an interview, not a series of status updates.
 
 ### One decision per turn
 
@@ -110,8 +96,8 @@ returned afterwards. **MUST NOT** — Replace the dialogue with generic progress
 ### Keep an open-questions list
 
 **MUST** — Maintain a visible list of unresolved questions in the plan, and update it every
-turn. The human may close any item on it; that closure is a decision and is recorded like any
-other.
+turn. The human may close any item on it; that closure is a decision, and it gets its own row in
+the [decision register](#discussions) with the question and their answer quoted like any other.
 
 ### Return to exploration on a new unknown
 
@@ -133,7 +119,7 @@ docs/plans/{plan-name}/
 └── progress/{plan-number}-attempt-{n}-{date}.md    written during implementation, not planning
 ```
 
-Exploratory tests live in the project's own test tree, never under `docs/`. See
+Experiments live with the code, not under `docs/`. See
 [Exploratory tests](#exploratory-tests).
 
 ### Name the problem, not the solution
@@ -144,37 +130,61 @@ Exploratory tests live in the project's own test tree, never under `docs/`. See
 - `memory-persistence`, not `memq-implementation`;
 - `basic-automated-builds`, not `build-pipeline-and-test-coverage-enforcement`.
 
-### Update an unmerged plan in place
+### Edit a plan in place until progress is reported
 
-**MUST** — Edit the existing file when the current plan has not yet reached `main`. **MUST
-NOT** — Create a new numbered file for it.
+**MUST** — Edit the existing file, in place, for as long as no attempt has reported progress
+against the plan. Reaching `main` does not freeze a plan: a merged plan that nobody has tried to
+implement is still the live description of the problem, and correcting it there is cheaper than
+correcting it in the implementing agent's head. **MUST NOT** — Create a new numbered file while
+the plan is still editable.
 
-### Merged plans are immutable
+### Reported progress freezes the plan
 
-**MUST NOT** — Edit a plan that has been merged to `main`. Check with
-`git log origin/main -- docs/plans/{plan-name}/`; any file listed there is frozen.
+**MUST NOT** — Edit a plan once an attempt has reported progress against it. Check with
+`ls docs/plans/{plan-name}/progress/` and
+`git log origin/main -- docs/plans/{plan-name}/progress/`; any progress log for the plan, local
+or on `main`, freezes it — including a log from an attempt that failed.
 
 ### Increment by copying beside the original
 
-**MUST** — Copy the merged plan to the next number in the same folder when its problem
+**MUST** — Copy the frozen plan to the next number in the same folder when its problem
 resurfaces — `001-{plan-name}.md` → `002-{plan-name}.md` — leave the original byte-for-byte
-untouched, and edit only the copy. The new plan **MUST** link back to the one it supersedes and
-state what changed and why. The branch takes the new number, e.g. `002-{plan-name}`.
+untouched, and edit only the copy. The branch takes the new number, e.g. `002-{plan-name}`.
 
 ### Exploratory tests
 
-**MUST** — Place every experiment in the project's existing test tree, under
+**MUST** — Place an experiment that can run as a test in the project's existing test tree, under
 `{test-context}/exploratory/{plan-name}/`, where `{test-context}` is the test root that already
-serves the module or language under investigation. They then compile, run, and report through
-the project's normal toolchain like any other test. **MUST NOT** — Put experiments under
-`docs/`, or run them as untracked ad-hoc scripts. Read-only inspection of the repository is not
-an experiment and needs no file.
+serves the module or language under investigation. It then compiles, runs, and reports through
+the project's normal toolchain like any other test.
+
+**MAY** — Write the experiment as anything else — a script, a container, a spike in another
+language, a harness that talks to a live service — when it will not usefully run as a test in
+that tree. Keep it under `{test-context}/exploratory/{plan-name}/` if it fits there; otherwise
+put it wherever it works and say in the plan where it lives and how to run it.
+
+**MUST** — Commit it either way, and record its outcome; see
+[Commit everything, including failures](#commit-everything-including-failures).
+
+Read-only inspection of the repository is not an experiment and needs no file.
+
+### An ADR may be added
+
+**MAY** — Write a new ADR when a decision in the [decision register](#discussions) is
+architectural and belongs in the project's own decision trail rather than only inside this plan.
+Follow the project's existing ADR location, numbering, and format — see
+[Read the handbook and the ADRs](#read-the-handbook-and-the-adrs).
+
+**MUST** — Put the ADR to the human before writing it, and record their answer in the register
+like any other decision.
+
+**MUST NOT** — Edit, supersede, or contradict an existing ADR without the human's explicit
+approval quoted in the register.
 
 ### Commit everything, including failures
 
 **MUST** — Commit each experiment and research report with its result as soon as it has one,
-including the ones that failed, disproved the idea, or were abandoned. A negative result the
-human never sees will be rediscovered at implementation time at full cost.
+including the ones that failed, disproved the idea, or were abandoned.
 
 ## Plan format
 
@@ -225,8 +235,21 @@ it was rejected — including the human's rationale when the rejection was their
 
 ### Discussions
 
-**MUST** — Record every non-trivial decision and the reasoning behind it, including ADR
-conflicts found during [Preflight](#preflight).
+**MUST** — Record every non-trivial decision as a row in the plan's decision register, in the
+order the decisions were taken, including ADR conflicts found during [Preflight](#preflight) and
+every ADR added under [An ADR may be added](#an-adr-may-be-added).
+
+**MUST** — Quote, on every decision the human made, both the question that was put to them and
+the answer they gave, in their own words. "The human agreed", a paraphrase, or a tidied-up
+summary is not a record.
+
+**MUST** — Name the decider on every row. Where the call was yours, the row carries the human's
+approval of it in the same verbatim form; a material decision with no recorded approval breaks
+[No unapproved decisions](#no-unapproved-decisions).
+
+**MUST** — Link back to its register row from every rejected alternative, every accepted
+cheapest-passing interpretation, and every closed open question. No decision may exist only in
+the session transcript.
 
 ### Execution Plan
 
@@ -243,27 +266,25 @@ of everything above it.
 
 ## Progress logs
 
-Progress logs belong to implementation, not to planning. The planning agent never writes one;
-it writes the instructions that make the implementing agent write them. These obligations go in
-[Implementing Agent Instructions](#implementing-agent-instructions) — the template already
-carries them.
+The planning agent never writes a progress log; it writes the obligations into
+[Implementing Agent Instructions](#implementing-agent-instructions).
 
 ### One log per attempt
 
 **MUST** — The implementing agent opens
 `docs/plans/{plan-name}/progress/{plan-number}-attempt-{n}-{date}.md` at the start of each
 attempt, where `{n}` is one higher than the highest existing attempt and `{date}` is
-`YYYY-MM-DD`, and appends to it as work proceeds.
+`YYYY-MM-DD`, and appends to it as work proceeds. Opening it freezes the plan — see
+[Reported progress freezes the plan](#reported-progress-freezes-the-plan).
 
 ### Append-only
 
-**MUST NOT** — Rewrite, tidy, condense, or delete an entry in a progress log once written. It
-is a record of what happened, not a summary of the current state. Corrections are new entries.
+**MUST NOT** — Rewrite, tidy, condense, or delete an entry in a progress log once written.
+Corrections are new entries.
 
 ### Committed progress is immutable
 
-**MUST NOT** — Amend or force-push a commit containing progress-log entries. A log that can be
-rewritten cannot be trusted as evidence of what was tried.
+**MUST NOT** — Amend or force-push a commit containing progress-log entries.
 
 ### Failed attempts are published, not discarded
 
