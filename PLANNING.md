@@ -116,11 +116,14 @@ continue; you **MUST NOT** end the session on your own judgement.
 docs/plans/{plan-name}/
 ├── 001-{plan-name}.md                              the plan
 ├── research/{report-name}/{files...}               research reports
+├── tracer-bullets/{bullet-name}/                   self-contained experiments
+│   ├── Dockerfile | compose.yaml                   the container the experiment runs in
+│   └── {files...}                                  self-contained sources and fixtures
 └── progress/{plan-number}-attempt-{n}-{date}.md    written during implementation, not planning
 ```
 
-Experiments live with the code, not under `docs/`. See
-[Exploratory tests](#exploratory-tests).
+Tracer bullets live under the plan, and their build artifacts never leave the container. See
+[Tracer bullets](#tracer-bullets).
 
 ### Name the problem, not the solution
 
@@ -151,20 +154,26 @@ or on `main`, freezes it — including a log from an attempt that failed.
 resurfaces — `001-{plan-name}.md` → `002-{plan-name}.md` — leave the original byte-for-byte
 untouched, and edit only the copy. The branch takes the new number, e.g. `002-{plan-name}`.
 
-### Exploratory tests
+### Tracer bullets
 
-**MUST** — Place an experiment that can run as a test in the project's existing test tree, under
-`{test-context}/exploratory/{plan-name}/`, where `{test-context}` is the test root that already
-serves the module or language under investigation. It then compiles, runs, and reports through
-the project's normal toolchain like any other test.
+A tracer bullet is the step beside research that settles a question by running something:
+where a research report argues from documentation, the tracer bullet proves or disproves it in
+code. See [Code over opinion](#code-over-opinion).
 
-**MAY** — Write the experiment as anything else — a script, a container, a spike in another
-language, a harness that talks to a live service — when it will not usefully run as a test in
-that tree. Keep it under `{test-context}/exploratory/{plan-name}/` if it fits there; otherwise
-put it wherever it works and say in the plan where it lives and how to run it.
+**MUST** — Make each experiment self-contained: everything it needs to build and run — sources,
+fixtures, dependency pins, the container definition — lives inside its own folder, and it runs
+from a clean checkout without prior setup on the host. The experiment **MUST NOT** depend on the
+rest of the repository: no imports, build references, or file paths that reach outside its own
+folder. External dependencies (packages, base images, public services) are fine when pinned.
 
-**MUST** — Commit it either way, and record its outcome; see
-[Commit everything, including failures](#commit-everything-including-failures).
+**MUST** — Execute the experiment inside a Docker container, never directly on the host. Provide
+a single documented entry point (a `Dockerfile` or `compose.yaml` plus one command) that builds
+and runs it.
+
+**MUST** — Keep every temporary build artifact — compiled output, caches, downloaded
+dependencies, generated fixtures — inside the container's ephemeral storage. **MUST NOT** —
+Bind-mount an output directory from the host or write artifacts into the working tree; only the
+committed sources and the recorded result leave the container.
 
 Read-only inspection of the repository is not an experiment and needs no file.
 
@@ -175,8 +184,10 @@ architectural and belongs in the project's own decision trail rather than only i
 Follow the project's existing ADR location, numbering, and format — see
 [Read the handbook and the ADRs](#read-the-handbook-and-the-adrs).
 
-**MUST** — Put the ADR to the human before writing it, and record their answer in the register
+**MUST** — Put the complete ADR to the human and record their answer in the register
 like any other decision.
+
+**MUST NOT** — Edit ADR after human approval.
 
 **MUST NOT** — Edit, supersede, or contradict an existing ADR without the human's explicit
 approval quoted in the register.
