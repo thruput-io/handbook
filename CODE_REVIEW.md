@@ -14,7 +14,7 @@ Serves the rules in [`RULES.md`](./RULES.md) and the quality definition in [`PHI
 - **git-tool** — the CLI for the host the PR lives on: `gh` for GitHub, or `az` with the `azure-devops` extension for Azure DevOps (`dev.azure.com`). Pick it from the PR URL. Every command and payload this workflow needs is in the matching [`gh-cheat-sheet.md`](./gh-cheat-sheet.md) or [`az-cheat-sheet.md`](./az-cheat-sheet.md), referred to below as `{git-tool}-cheat-sheet.md`.
 - **head commit** — the commit the review is anchored to: `headRefOid` on GitHub, `lastMergeSourceCommit.commitId` on Azure DevOps. Every file read and every inline comment resolves against it.
 - **change set** — the lines this PR adds or removes at the head commit.
-- **checkout** — if the working directory is the repository, checkout, otherwise new checkout.
+- **checkout** — the head commit checked out with a clean working tree: in the working directory if it is the repository under review and already at the head commit, otherwise a fresh worktree or clone at the head commit. A checkout at any other commit is not a checkout of this PR.
 - **surface** — the code a violation may be reported against. On a first-time review the surface is the change set. On a subsequent review it is narrowed as [Subsequent Reviews](#subsequent-reviews) sets out.
 - **full context** — the surface plus the reading in [step 1](#1-setup): every changed file in full, the call sites of changed public symbols, and the covering test files. Context is what a verdict is *reached from*, never what a verdict is reported *against*.
 
@@ -71,6 +71,8 @@ The git-tool must be available.
 Fetch the PR overview, the changed files, and the existing review comments — the last so this review does not duplicate a comment already on the PR. On Azure DevOps, filter the system-generated threads out of that comparison; counting them as review comments corrupts the check.
 
 Extract the head commit and the PR description from the overview response — inline comments are posted against the head commit, and the description is handed to every probe in [step 3](#3-rule-evaluation), so it is fetched once here rather than once per subagent. Do **not** guess the head commit; do **not** use `HEAD` of the local checkout.
+
+**Verify the checkout before anything reads from it.** Fetching the head commit and reading the working directory are two different things, and only the first has happened so far. Before step 3, compare the local checkout's `HEAD` with the head commit extracted above and confirm the tree is clean. If either check fails, do not read from that directory: check the head commit out into a fresh worktree — see `{git-tool}-cheat-sheet.md § Read files at the head commit` — or fall back to fetching per file at the head commit and pass no checkout to the probes. Record the verified commit in the ledger. This verification is done once, here; probes receive the checkout path and the head commit and trust them — they do not re-verify.
 
 **Read beyond the change set.** Hunks are not enough to evaluate most of [`RULES.md`](./RULES.md) — dead code, layering, primitive leakage, missing tests, and unrepresentable illegal states are all invisible in isolated hunks. Before probing, obtain at the head commit:
 
