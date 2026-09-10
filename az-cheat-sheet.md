@@ -140,14 +140,17 @@ Update a thread's status — the resolve/unresolve equivalent — with `--http-m
 
 ## Attach the ledger
 
-Azure DevOps attaches files to a pull request as a first-class resource — [Pull Request Attachments § Create, api-version 7.1](https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-attachments/create?view=azure-devops-rest-7.1). The request body is the raw file as `application/octet-stream` rather than the JSON `az devops invoke` sends, so this one call goes over plain REST with the same PAT:
+Azure DevOps attaches files to a pull request as a first-class resource — [Pull Request Attachments § Create, api-version 7.1](https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-attachments/create?view=azure-devops-rest-7.1). The request body is the raw file as `application/octet-stream`.
+
+> [!IMPORTANT]
+> Azure DevOps rejects `.md` file extensions on pull request attachments with HTTP 400 Bad Request (`Allowed extensions are PNG, GIF, JPG, JPEG, DOCX, PPTX, XLSX, TXT, PDF, ZIP, GZ, LYR, MOV, MP4, CSV`). Upload `ledger.md` using the filename **`ledger.txt`**:
 
 ```bash
 curl -sS --fail -X POST \
   -u ":$AZURE_DEVOPS_EXT_PAT" \
   -H "Content-Type: application/octet-stream" \
   --data-binary @ledger.md \
-  "{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{id}/attachments/ledger.md?api-version=7.1"
+  "{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{id}/attachments/ledger.txt?api-version=7.1"
 ```
 
 The response is the attachment metadata; its `url` field is the download link. An attachment is not visible in the PR timeline on its own — link it from the PR-level summary thread (a thread without `threadContext`, [§ Post an inline comment thread](#post-an-inline-comment-thread)):
@@ -176,8 +179,172 @@ Consequences for a review run against Azure DevOps:
 - Post every thread **before** casting the vote, so the verdict never lands ahead of its evidence.
 - A failure partway through leaves the PR with some threads posted. Re running must not duplicate them — reconcile against existing threads first.
 
+## Submit All Draft Comments (Azure DevOps Batch Submission)
+
+When a review produces multiple comments in `review.json` / `comments.json`, **do NOT send the array directly to `az devops invoke`**. Azure DevOps rejects review arrays with HTTP 400 Bad Request because `pullRequestThreads` expects a single thread object per POST request.
+
+To file all comments together, loop over your local draft comments, post each thread individually, attach/link `ledger.md`, post the PR summary thread, and cast the vote.
+
+### Python Batch Submission Script
+
+Save and execute this script (e.g. as `submit_az_comments.py`) to post all draft comments, upload `ledger.md` as `ledger.txt`, check existing threads to avoid duplicate comments on retries, post the summary comment with the ledger link, and cast the vote:
+
+```python
+#!/usr/bin/env python3
+import json
+import os
+import subprocess
+import sys
+
+# Requirements: az CLI with azure-devops extension logged in or AZURE_DEVOPS_EXT_PAT set.
+# Input: review.json containing {"comments": [{"path": "...", "line": 42, "side": "RIGHT", "body": "..."}], "body": "Summary..."}
+
+org = os.environ.get("AZ_ORG")  # e.g. https://dev.azure.com/NavistarCollection
+project = os.environ.get("AZ_PROJECT")  # e.g. NavistarProduction
+repo_id = os.environ.get("AZ_REPO_ID")  # GUID or repo name
+pr_id = os.environ.get("AZ_PR_ID")  # e.g. 51964
+comments_file = sys.argv[1] if len(sys.argv) > 1 else "review.json"
+vote = os.environ.get("AZ_VOTE")  # approve | approve-with-suggestions | wait-for-author | reject
+
+def run_cmd(cmd):
+    res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    if res.returncode != 0:
+        print(f"Error running command: {cmd}\n{res.stderr}", file=sys.stderr)
+    return res
+
+# 1. Fetch existing threads to prevent duplicate posts on retries
+get_threads_cmd = f"az devops invoke --area git --resource pullRequestThreads --route-parameters project={project} repositoryId={repo_id} pullRequestId={pr_id} --org {org} --api-version 7.1 --query \"value[?comments[0].commentType=='text'].{{path:threadContext.filePath, line:threadContext.rightFileStart.line, body:comments[0].content}}\""
+res = run_cmd(get_threads_cmd)
+existing_threads = json.loads(res.stdout) if res.returncode == 0 and res.stdout.strip() else []
+
+def is_duplicate(file_path, line, body):
+    for et in existing_threads:
+        if et.get("path") == file_path and et.get("line") == line and et.get("body") == body:
+            return True
+    return False
+
+# 2. Iterate and post each inline comment thread
+with open(comments_file) as f:
+    draft = json.load(f)
+
+comments = draft.get("comments", draft if isinstance(draft, list) else [])
+
+for i, comment in enumerate(comments, 1):
+    raw_path = comment["path"]
+    file_path = f"/{raw_path.lstrip('/')}"
+    line = int(comment["line"])
+    side = comment.get("side", "RIGHT").upper()
+    body = comment["body"]
+
+    if is_duplicate(file_path, line, body):
+        print(f"[{i}/{len(comments)}] Skipping duplicate: {file_path}:{line}")
+        continue
+
+    line_key = "leftFileStart" if side == "LEFT" else "rightFileStart"
+    end_key = "leftFileEnd" if side == "LEFT" else "rightFileEnd"
+
+    payload = {
+        "comments": [{"parentCommentId": 0, "commentType": "text", "content": body}],
+        "status": "active",
+        "threadContext": {
+            "filePath": file_path,
+            line_key: {"line": line, "offset": 1},
+            end_key: {"line": line, "offset": 1}
+        }
+    }
+
+    tmp_path = f"/tmp/az_thread_{i}.json"
+    with open(tmp_path, "w") as tf:
+        json.dump(payload, tf)
+
+    print(f"[{i}/{len(comments)}] Posting comment to {file_path}:{line}...")
+    post_cmd = f"az devops invoke --area git --resource pullRequestThreads --route-parameters project={project} repositoryId={repo_id} pullRequestId={pr_id} --org {org} --api-version 7.1 --http-method POST --in-file {tmp_path}"
+    run_cmd(post_cmd)
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+
+# 3. Upload ledger if ledger.md exists on disk and append download link
+summary_text = draft.get("body", "")
+ledger_path = "ledger.md"
+
+if os.path.exists(ledger_path):
+    print("Uploading ledger.md as ledger.txt attachment...")
+    pat = os.environ.get("AZURE_DEVOPS_EXT_PAT", "")
+    if not pat:
+        pat_res = subprocess.run("/usr/local/bin/get-ado-pat.sh --raw", shell=True, capture_output=True, text=True)
+        pat = pat_res.stdout.strip() if pat_res.returncode == 0 else ""
+
+    upload_cmd = f"curl -sS --fail -X POST -u ':{pat}' -H 'Content-Type: application/octet-stream' --data-binary @{ledger_path} '{org}/{project}/_apis/git/repositories/{repo_id}/pullRequests/{pr_id}/attachments/ledger.txt?api-version=7.1'"
+    att_res = run_cmd(upload_cmd)
+    if att_res.returncode == 0 and att_res.stdout.strip():
+        try:
+            att_data = json.loads(att_res.stdout)
+            att_url = att_data.get("url") or att_data.get("_links", {}).get("self", {}).get("href")
+            if att_url:
+                summary_text += f"\n\n[Review ledger]({att_url})"
+        except Exception as e:
+            print(f"Warning: Failed to parse attachment response: {e}", file=sys.stderr)
+
+# 4. Post summary PR-level comment (including ledger link)
+if summary_text:
+    summary_payload = {
+        "comments": [{"parentCommentId": 0, "commentType": "text", "content": summary_text}],
+        "status": "active"
+    }
+    with open("/tmp/az_summary.json", "w") as sf:
+        json.dump(summary_payload, sf)
+    print("Posting PR summary comment...")
+    summary_cmd = f"az devops invoke --area git --resource pullRequestThreads --route-parameters project={project} repositoryId={repo_id} pullRequestId={pr_id} --org {org} --api-version 7.1 --http-method POST --in-file /tmp/az_summary.json"
+    run_cmd(summary_cmd)
+    if os.path.exists("/tmp/az_summary.json"):
+        os.remove("/tmp/az_summary.json")
+
+# 5. Set PR vote (cast ONLY after all comments are posted)
+if vote:
+    print(f"Setting PR vote to {vote}...")
+    vote_cmd = f"az repos pr set-vote --id {pr_id} --vote {vote} --org {org} --detect false"
+    run_cmd(vote_cmd)
+```
+
+### Shell Loop Equivalent
+
+```bash
+# Loop through comments array in review.json using jq
+jq -c '.comments[]' review.json | while read -r comment; do
+  path=$(echo "$comment" | jq -r '.path')
+  line=$(echo "$comment" | jq -r '.line')
+  body=$(echo "$comment" | jq -r '.body')
+
+  # Ensure path is repository-absolute with a leading slash
+  [[ "$path" != /* ]] && path="/$path"
+
+  cat <<EOF > /tmp/az_thread.json
+{
+  "comments": [
+    {
+      "parentCommentId": 0,
+      "commentType": "text",
+      "content": $(echo "$body" | jq -R .)
+    }
+  ],
+  "status": "active",
+  "threadContext": {
+    "filePath": "$path",
+    "rightFileStart": { "line": $line, "offset": 1 },
+    "rightFileEnd": { "line": $line, "offset": 1 }
+  }
+}
+EOF
+
+  az devops invoke --area git --resource pullRequestThreads \
+    --route-parameters project={project} repositoryId={repoId} pullRequestId={id} \
+    --org {org} --api-version 7.1 --http-method POST --in-file /tmp/az_thread.json
+done
+```
+
 ## Verification status
 
 Every read command above was executed against a live PR (`NavistarCollection/NavistarProduction`, PR 51964) and returned the documented shape.
 
 The writing paths — thread POST, thread PATCH, `set-vote`, and the attachment upload — are documented from the REST API and were **not** executed, to avoid posting to a real pull request. Confirm the payload against a scratch PR before trusting it.
+
