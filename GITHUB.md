@@ -18,6 +18,7 @@
    - **User endpoints fail.** `GET /user`, `gh auth status`, and `gh auth login` fail with `403 Resource not accessible by integration`. Use repository-scoped commands.
    - **`@me` fails.** `--assignee @me`, `--reviewer @me`, and `--web` fail the same way. Name a user or team explicitly or omit the flag.
    - **One hour.** Tokens expire after 60 minutes. Always store in ~/secrets/created_by_agent folder
+   - **Vanilla Git** Install 
 
 5. **Sample invocations.**
 
