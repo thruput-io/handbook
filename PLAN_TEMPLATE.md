@@ -37,18 +37,10 @@ as done on inspection alone.
 
 ### Progress log
 
-Keep an append-only progress log for this attempt:
-
-- Open `docs/plans/{plan-name}/progress/{NNN}-attempt-{n}-{YYYY-MM-DD}.md` before the first
-  change, where `{n}` is one higher than the highest attempt already in `progress/`.
-- Append as you go: what you attempted, what the evidence showed, what you decided, what broke.
-- **MUST NOT** rewrite, condense, or delete an existing entry. Corrections are new entries.
-- **MUST NOT** amend or force-push a commit that contains progress-log entries.
-- Commit the log alongside the work it describes.
-
-**If this attempt is abandoned:** open a pull request carrying the progress log, and state in
-the PR body what was attempted, where it broke, and what the next attempt should do
-differently. Do not delete the branch or the log — the record of the failure is the deliverable.
+Before the first change, open
+`docs/plans/{plan-name}/progress/{NNN}-attempt-{n}-{YYYY-MM-DD}.md` from
+[`PLAN_IMPLEMENTATION_LOG.md`](https://github.com/thruput-io/handbook/blob/main/PLAN_IMPLEMENTATION_LOG.md)
+and follow the rules stated in it. Opening it freezes this plan.
 
 ## Background
 

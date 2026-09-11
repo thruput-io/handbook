@@ -279,6 +279,8 @@ of everything above it.
 
 The planning agent never writes a progress log; it writes the obligations into
 [Implementing Agent Instructions](#implementing-agent-instructions).
+The log's skeleton and the rules it carries are in `PLAN_IMPLEMENTATION_LOG.md`; the plan points
+to it rather than restating them.
 
 ### One log per attempt
 
