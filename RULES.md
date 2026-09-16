@@ -76,11 +76,11 @@ The rules below are a ladder: take the highest rung that applies, and descend on
 
 #### Available
 
-**SHOULD NOT** — Adopt existing code that requires payments or license models, or an extra platform or framework, that would increase the maintenance burden.
+**MUST NOT** — Adopt existing code that requires payments or license models, or an extra platform or framework, that would increase the maintenance burden.
 
 #### Maintained
 
-**SHOULD** — Adopt existing code only where it is stable, so we do not add bugs by using it; easy to use, by having a large user community, documentation in the traditional sense, or good open-sourced code; and kept current, by being actively maintained by several maintainers.
+**MUST** — Adopt existing code only where it is stable, so we do not add bugs by using it; easy to use, by having a large user community, documentation in the traditional sense, or good open-sourced code; and kept current, by being actively maintained by several maintainers.
 
 ### 4. Maintainability
 
@@ -194,7 +194,7 @@ Choose representations in which the invalid state cannot be constructed at all, 
 
 #### Domain-only interfaces
 
-**MUST** — Access domain objects only via public methods that only accept other domain objects as parameters and only return other domain objects.
+**MUST** — Access domain objects only via public methods that only accept other domain objects as parameters and only return other domain objects, with the sole exception of perimeter validating factories ([Validating factory](#validating-factory)) that parse raw input into domain types.
 
 #### Domain operations
 
@@ -240,7 +240,7 @@ Choose representations in which the invalid state cannot be constructed at all, 
 
 #### No comments in code
 
-**MUST NOT** — Comment code, configuration, or any other version-controlled artifact. A comment is exempt only where something other than a human reader requires it: a shebang; a machine-read directive that is syntactically a comment (`# type: ignore`, `# noqa`, an SPDX identifier); API documentation extracted to a published doc site (Javadoc, KDoc, docstrings); a mandated license header; a generated-file banner. See [`PHILOSOPHY.md § Why a comment is not the place`](./PHILOSOPHY.md#why-a-comment-is-not-the-place).
+**MUST NOT** — Comment code, configuration, or any other version-controlled artifact. A comment is exempt only where something other than a human reader requires it: a shebang; a machine-read directive that is syntactically a comment (an SPDX identifier, file encoding declaration); API documentation extracted to a published doc site (Javadoc, KDoc, docstrings); a mandated license header; a generated-file banner. See [`PHILOSOPHY.md § Why a comment is not the place`](./PHILOSOPHY.md#why-a-comment-is-not-the-place).
 
 What the comment would have carried still belongs somewhere. Where depends on what it is.
 
@@ -318,7 +318,7 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 #### Linear deterministic code
 
-**MUST NOT** — Write tests that contain branching logic, such as but limited to ifs or defaulting of values, switches 
+**MUST NOT** — Write tests that contain branching logic, such as, but not limited to, `if` statements, default fallbacks, or `switch` expressions.
 
 #### No coverage-only tests
 
@@ -352,7 +352,7 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 #### One subject under test
 
-**MUST** — Never have more than one subject under test. Never test the composition of objects.
+**MUST** — In unit tests, never have more than one subject under test and never test the composition of objects.
 
 #### Test Case Coupling
 
@@ -368,7 +368,7 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 **MUST** — Simulate production instead of altering the behavior of the runtime artifact.
 
-### 12. Quality Tooling
+### 14. Quality Tooling
 
 #### Alert on broken tooling
 
@@ -402,7 +402,7 @@ What the comment would have carried still belongs somewhere. Where depends on wh
 
 **PREFER** — Ask for guidance on how to solve tricky linting rules instead of 'hacking' it.
 
-### 13. Shift Left
+### 15. Shift Left
 
 Every rung below is a mechanism for stopping the same bug or validating data. The further left it is caught, the cheaper and more certain the catch: the leftmost rung makes the bad state impossible to hold, the rightmost only observes the failure once deployed.
 
