@@ -54,14 +54,51 @@ The pairs read in both directions: finding the latter in code is an alarm, a sym
 should be done about the former. The repair belongs on the left side of the pair, not in more of the
 right.
 
-## How quality is NOT measured
+## Purpose and Accuracy
 
-Quality is NOT measured by defaulting to the easiest or most convenient option, by smartness or
-cleverness, by compactness, by performance, or by features.
+Without a clear notion of WHY a piece of code is being written, it should not be written at all. We never write code without a purpose, and that purpose is measured in what good it does for the users of the code.
 
-Performance and features are requirements like any other — where one is specified, meeting it is part of
-Correctness. What they are not is credit against the axes above. Code does not become good by being fast,
-and a release does not become good by containing more.
+The code is a **subset** of the **WHY**: every part of it solves some part of the WHY, and no part of it reaches outside. The converse is not required — a change need not cover the whole WHY, which may take more than one change to satisfy. What the code does solve, it solves accurately, without collateral effects that consumers would find unacceptable.
+
+## Simplicity and the Ladder
+
+The simplest code of all is no code. Next in simplicity comes code we do not write ourselves.
+
+When solving a problem, climb the simplicity ladder: take the highest rung that applies, and descend only when the rung above offers nothing viable:
+1. **Reuse existing code in the codebase:** Refactor into reusable components where needed.
+2. **Use what the platform or framework provides:** Rely on built-in capabilities.
+3. **Use an external dependency:** Integrate maintained third-party libraries.
+4. **Use an external tool or service:** Call existing services rather than build an equivalent.
+
+Every rung is gated by availability (avoiding burdensome licenses or unnecessary extra platforms) and active maintenance (stable, well-documented, actively maintained).
+
+## Maintainability and Standards
+
+Our code is maintained by developers who did not write it. Following what the industry already does is what makes that possible: a maintainer who knows standard idioms does not have to learn idiosyncratic novelties.
+
+This governs the form code takes — its structure, idioms, and naming — not what it does. Novelty belongs in the solution, assembled from parts and conventions a maintainer already recognises. Where no industry standard exists, the bar becomes consistency with the surrounding codebase.
+
+## Shift Left
+
+Bugs and data validation are handled earliest, cheapest, and with the greatest certainty when shifted as far left as possible:
+
+| 1. Illegal states unrepresentable | 2. Static code analysis | 3. Unit tests | 4. Integration tests | 5. E2E tests |
+|---|---|---|---|---|
+| No illegal value can be held in domain types. | Compiler, type checker, and linter reject invalid code before execution. | One component's behaviour tested in isolation in process. | Components exercised together against real adapters in a container run. | Deployed containers exercised in a running environment from outside. |
+
+A safeguard belongs at the leftmost rung that can catch the error; descend to runtime or test checks only when static or type-level prevention is not possible.
+
+## Why a comment is not the place
+
+Comments in version-controlled code are often symptoms of missing structure, inadequate naming, or deferred work. What a developer attempts to convey in a comment almost always belongs in a more durable, verifiable medium:
+
+- **Clarification:** Introduce descriptive variable names that express intent, extract focused functions or modules, or write a negative test showing why a simpler construct failed.
+- **Procrastination (TODOs):** Add a failing test pinning the weakness, split the work into smaller reviewable PRs, or start an explicit plan document.
+- **Architectural & Design Decisions:** Document in an Architectural Decision Record (ADR) under `docs/adrs/`.
+- **Usage Documentation:** Place in `README.md` or user documentation.
+- **Apologies, Crutches, or Confessions:** Replace with a failing test or fix the underlying design flaw.
+
+A comment is justified only when required by something other than a human reader: shebangs, machine-read metadata directives (such as SPDX license identifiers or file encoding headers), API documentation generated for public doc sites, mandated license headers, or generated-file banners.
 
 ## How quality is achieved
 
